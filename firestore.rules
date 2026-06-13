@@ -1,0 +1,55 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Global Safety Net default catch-all
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Reuseable global helpers
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    // 1. User profile collection
+    match /users/{userId} {
+      allow read: if isOwner(userId);
+      allow create, update: if isOwner(userId) && 
+        incoming().uid == userId &&
+        incoming().email is string &&
+        incoming().email.size() <= 256;
+      allow delete: if false; // Profiles are immortal
+    }
+
+    // 2. Gigs list collection
+    match /gigs/{gigId} {
+      allow read: if true; // Any visitor can search or view local gigs
+      allow create: if isSignedIn() &&
+        incoming().id == gigId &&
+        incoming().title is string && incoming().title.size() <= 100 &&
+        incoming().employer is string && incoming().employer.size() <= 100;
+      allow update: if isSignedIn() &&
+        existing().employerUid == request.auth.uid &&
+        incoming().title is string && incoming().title.size() <= 100;
+      allow delete: if isSignedIn() &&
+        existing().employerUid == request.auth.uid;
+    }
+  }
+}

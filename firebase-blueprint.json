@@ -1,0 +1,79 @@
+{
+  "entities": {
+    "User": {
+      "title": "User Profile",
+      "description": "User account registration and role details",
+      "type": "object",
+      "properties": {
+        "uid": {
+          "type": "string",
+          "description": "Firebase Authentication User UID"
+        },
+        "displayName": {
+          "type": "string",
+          "description": "Full display name of user"
+        },
+        "email": {
+          "type": "string",
+          "description": "Primary verified email address"
+        },
+        "photoURL": {
+          "type": "string",
+          "description": "User's Google avatar profile picture URL"
+        },
+        "role": {
+          "type": "string",
+          "enum": ["student", "employer"],
+          "description": "Selected current active system role"
+        },
+        "reliabilityScore": {
+          "type": "number",
+          "description": "Student worker reliability percentage score"
+        }
+      },
+      "required": ["uid", "email"]
+    },
+    "Gig": {
+      "title": "Gig",
+      "description": "Active hyper-local student gig posting",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique gig document identification code"
+        },
+        "title": {
+          "type": "string",
+          "description": "Title designation of the gig"
+        },
+        "employer": {
+          "type": "string",
+          "description": "Name of local SME hiring workspace"
+        },
+        "locationName": {
+          "type": "string",
+          "description": "Name of geographic district or cafe location"
+        },
+        "rate": {
+          "type": "string",
+          "description": "Payment salary compensation rate"
+        },
+        "description": {
+          "type": "string",
+          "description": "Detailed workplace requirements overview"
+        }
+      },
+      "required": ["id", "title", "employer", "rate"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "Store individual student and employer profile configurations"
+    },
+    "/gigs/{gigId}": {
+      "schema": "Gig",
+      "description": "Active gig postings index"
+    }
+  }
+}
