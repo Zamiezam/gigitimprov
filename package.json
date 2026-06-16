@@ -35,13 +35,14 @@
     "@types/react-dom": "^19.2.3",
     "autoprefixer": "^10.4.21",
     "cross-env": "^10.1.0",
-    "esbuild": "^0.25.0",
+    "esbuild": "^0.25.12",
     "tailwindcss": "^4.1.14",
     "tsx": "^4.21.0",
     "typescript": "~5.8.2"
   },
   "optionalDependencies": {
     "@rollup/rollup-linux-x64-gnu": "^4.34.9",
-    "lightningcss-linux-x64-gnu": "^1.28.1"
+    "lightningcss-linux-x64-gnu": "^1.28.1",
+    "@tailwindcss/oxide-windows-x64": "*"
   }
 }
