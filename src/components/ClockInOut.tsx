@@ -1,5 +1,5 @@
 // components/ClockInOut.tsx
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { Clock, Play, Square, CheckCircle, AlertCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
@@ -8,7 +8,6 @@ interface ClockInOutProps {
   gigLocation: string;
   onClockIn?: (time: Date) => void;
   onClockOut?: (time: Date, duration: number) => void;
-  key?: React.Key;
 }
 
 export default function ClockInOut({ gigTitle, gigLocation, onClockIn, onClockOut }: ClockInOutProps) {

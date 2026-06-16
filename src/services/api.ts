@@ -7,7 +7,7 @@ import { mockGigs, mockApplicants } from './mockApi';
 // Re-export supabase for use in other components
 export { supabase };
 
-const ai = new GoogleGenAI({ apiKey: import.meta.env.VITE_GEMINI_API_KEY || 'placeholder-api-key' });
+const ai = new GoogleGenAI({ apiKey: import.meta.env.VITE_GEMINI_API_KEY });
 
 // Make sure ALL functions are exported
 export async function verifyStudentIdWithAI(imageBase64: string) {

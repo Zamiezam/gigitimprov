@@ -1,5 +1,4 @@
 // EmployerDashboardView.tsx - Complete fixed version
-// EmployerDashboardView.tsx - Correct imports (no duplicates)
 import React, { useState, useEffect } from 'react';
 import { AppView, Gig, Applicant } from '../types';
 import { initialApplicants, initialBackupWorkers } from '../data';
@@ -9,8 +8,8 @@ import BackupPoolWidget from './BackupPoolWidget';
 import EmployerMyGigs from './EmployerMyGigs';
 import HiredWorkers from './HiredWorkers';
 import WorkerProfileModal from './WorkerProfileModal';
-import EmployerSettings from './EmployerSettings';  // Add this once
-import Wallet from './Wallet';  // Add this once
+import EmployerSettings from './EmployerSettings';
+import Wallet from './Wallet';
 import AdminSeedButton from './AdminSeedButton';
 import DebugPanel from './DebugPanel';
 import { 
@@ -23,14 +22,13 @@ import {
 import { motion, AnimatePresence } from 'motion/react';
 import { GoogleGenAI } from '@google/genai';
 
-const ai = new GoogleGenAI({ apiKey: import.meta.env.VITE_GEMINI_API_KEY || 'placeholder-api-key' });
+const ai = new GoogleGenAI({ apiKey: import.meta.env.VITE_GEMINI_API_KEY });
 
 interface EmployerDashboardViewProps {
   onNavigate: (view: AppView) => void;
   gigs: Gig[];
   onAddGig: (gig: Gig) => void;
   onLogout?: () => void;
-  onSwitchToWorker?: () => void;
 }
 
 // Pre-defined gig templates for quick posting
@@ -120,18 +118,10 @@ export default function EmployerDashboardView({ onNavigate, gigs, onAddGig, onLo
   const [selectedGigId, setSelectedGigId] = useState<string | null>(null);
 
   // Post gig form with defaults
-  const [formData, setFormData] = useState<{
-    title: string;
-    rate: string;
-    category: 'Event' | 'F&B' | 'Logistics' | 'Cleaning';
-    duration: string;
-    description: string;
-    tags: string;
-    location: string;
-  }>({
+  const [formData, setFormData] = useState({
     title: 'Cafe Assistant',
     rate: '12',
-    category: 'F&B',
+    category: 'F&B' as const,
     duration: '6 Hours',
     description: 'Help with basic cafe tasks, taking orders, and serving customers during the afternoon rush. Training provided, friendly team!',
     tags: 'F&B Support, Student Friendly, Flexible Hours',
@@ -199,6 +189,7 @@ export default function EmployerDashboardView({ onNavigate, gigs, onAddGig, onLo
       fetchAllApplicants();
     }
   }, [user]);
+
   useEffect(() => {
     // Subscribe to real-time gig changes
     const channel = supabase
@@ -246,39 +237,17 @@ export default function EmployerDashboardView({ onNavigate, gigs, onAddGig, onLo
         .order('created_at', { ascending: false });
       
       if (!error && data && data.length > 0) {
-        const mappedApplicants: Applicant[] = data.map((app: any) => {
-          let transport = app.profiles?.transport || 'Public Transport';
-          let skills = app.profiles?.skills || [];
-          let experience = app.profiles?.experience || '';
-          let bioText = app.profiles?.bio || '';
-
-          if (bioText.trim().startsWith('{') && bioText.trim().endsWith('}')) {
-            try {
-              const parsed = JSON.parse(bioText);
-              bioText = parsed.bio || '';
-              transport = parsed.transport || transport;
-              skills = parsed.skills || skills;
-              experience = parsed.experience || experience;
-            } catch (e) {
-              // fallback
-            }
-          }
-
-          return {
-            id: app.id,
-            name: app.profiles?.full_name || 'Student Applicant',
-            avatar: app.profiles?.avatar_url || `https://randomuser.me/api/portraits/${Math.random() > 0.5 ? 'men' : 'women'}/${Math.floor(Math.random() * 100)}.jpg`,
-            rating: 4.9, // use consistent rating
-            badge: app.profiles?.is_verified ? 'Verified Student' : 'Student',
-            noShowRate: `${Math.floor(Math.random() * 5)}%`,
-            distance: `${Math.floor(Math.random() * 3) + 1}km away`,
-            bio: app.cover_letter || bioText || `Experienced student worker looking for this position. Reliable and hardworking.`,
-            status: app.status || 'Pending',
-            transport: transport,
-            skills: skills,
-            experience: experience
-          };
-        });
+        const mappedApplicants: Applicant[] = data.map((app: any) => ({
+          id: app.id,
+          name: app.profiles?.full_name || 'Student Applicant',
+          avatar: app.profiles?.avatar_url || `https://randomuser.me/api/portraits/${Math.random() > 0.5 ? 'women' : 'men'}/${Math.floor(Math.random() * 100)}.jpg`,
+          rating: 4 + Math.random(),
+          badge: app.profiles?.is_verified ? 'Verified Student' : 'Student',
+          noShowRate: `${Math.floor(Math.random() * 10)}%`,
+          distance: `${Math.floor(Math.random() * 5) + 1}km away`,
+          bio: app.cover_letter || `Experienced student worker looking for this position. Reliable and hardworking.`,
+          status: app.status || 'Pending'
+        }));
         setApplicants(mappedApplicants);
       } else {
         setApplicants([
@@ -463,7 +432,6 @@ export default function EmployerDashboardView({ onNavigate, gigs, onAddGig, onLo
       await fetchMyGigs();
       await fetchAllApplicants();
       
-      // Also refresh the gigs list in the parent component
       setTimeout(() => {
         setShowSuccessToast(null);
       }, 4000);
@@ -473,10 +441,10 @@ export default function EmployerDashboardView({ onNavigate, gigs, onAddGig, onLo
       setTimeout(() => setShowSuccessToast(null), 5000);
     }
   };
-  //handle reject
+
+  // handle reject
   const handleReject = async (applicant: any, reason: string) => {
     try {
-      // Update applicant status in database
       const { error } = await supabase
         .from('applicants')
         .update({ 
@@ -488,7 +456,6 @@ export default function EmployerDashboardView({ onNavigate, gigs, onAddGig, onLo
       
       if (error) throw error;
       
-      // Remove from local state
       setApplicants(prev => prev.filter(a => a.id !== applicant.id));
       setShowSuccessToast(`Rejected ${applicant.name} - Reason: ${reason}`);
       setTimeout(() => setShowSuccessToast(null), 3000);
@@ -498,6 +465,7 @@ export default function EmployerDashboardView({ onNavigate, gigs, onAddGig, onLo
       setTimeout(() => setShowSuccessToast(null), 3000);
     }
   };
+
   // Filter and sort applicants
   const filteredApplicants = applicants
     .filter(a => statusFilter === 'all' || a.status === statusFilter)
@@ -625,7 +593,6 @@ export default function EmployerDashboardView({ onNavigate, gigs, onAddGig, onLo
         </aside>
 
         {/* Main Area */}
-
         <main className="flex-1 ml-0 md:ml-64 p-4 md:p-8 min-h-screen pb-24">
           {currentSubView === 'dashboard' && (
             <div className="max-w-7xl mx-auto space-y-8">

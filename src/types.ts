@@ -1,7 +1,6 @@
 export enum AppView {
   Landing = 'landing',
   EmployerDashboard = 'employer-dashboard',
-  EmployerMyGigs = 'employer-mygigs',
   WorkerBrowse = 'worker-browse',
   WorkerReliability = 'worker-reliability'
 }
@@ -23,13 +22,6 @@ export interface Gig {
   // FIX: coords now carries both visual map offsets (x/y %) AND real GPS coords (lat/lng)
   // lat/lng are required for Leaflet; x/y are kept for any legacy visual map pins
   coords: { x: number; y: number; lat: number; lng: number };
-  
-  // Database fields (for direct queries)
-  status?: string;
-  location_name?: string;
-  employer_id?: string;
-  created_at?: string;
-  is_instant?: boolean;
 }
 
 export interface Applicant {

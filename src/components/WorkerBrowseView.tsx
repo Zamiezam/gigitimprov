@@ -494,6 +494,7 @@ export default function WorkerBrowseView({
                 <div className={`relative w-full overflow-hidden border-b border-outline-variant shadow-xs transition-all ${
                   showMapOnMobile ? 'h-[calc(100vh-140px)] block' : 'hidden md:block md:h-[350px]'
                 }`}>
+                  {/* Leaflet map — real GPS coords */}
                   <MapContainer center={[6.0367, 116.1186]} zoom={13} className="w-full h-full" zoomControl={false}>
                     <TileLayer
                       attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'

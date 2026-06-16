@@ -246,7 +246,7 @@ export default function EmployerMyGigs({ onNavigate, onPostNewGig }: EmployerMyG
           <div className="bg-white rounded-xl border border-outline-variant p-4">
             <p className="text-xs text-on-surface-variant">Total Applicants</p>
             <p className="text-2xl font-bold text-secondary">
-              {(Object.values(applicantsCount) as number[]).reduce((a: number, b: number) => a + b, 0)}
+              {Object.values(applicantsCount).reduce((a, b) => a + b, 0)}
             </p>
           </div>
         </div>

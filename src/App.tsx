@@ -1,4 +1,4 @@
-// App.tsx - Updated with proper auth guards (no routing needed)
+// App.tsx - Fixed role-based access
 import { useState, useEffect } from 'react';
 import { AppView, Gig } from './types';
 import { initialGigs } from './data';
@@ -51,13 +51,14 @@ export default function App() {
       return;
     }
     
-    // Role validation
-    if (view === AppView.EmployerDashboard && userRole !== 'employer' && userRole !== 'both') {
+    // Role validation - employers can ONLY see employer views
+    if (view === AppView.EmployerDashboard && userRole !== 'employer') {
       alert('Access denied. You need an employer account to access this area.');
       return;
     }
     
-    if ((view === AppView.WorkerBrowse || view === AppView.WorkerReliability) && userRole !== 'worker' && userRole !== 'both') {
+    // Workers can ONLY see worker views
+    if ((view === AppView.WorkerBrowse || view === AppView.WorkerReliability) && userRole !== 'worker') {
       alert('Access denied. You need a worker account to access this area.');
       return;
     }
@@ -85,22 +86,23 @@ export default function App() {
           <LandingView
             onNavigate={handleNavigate}
             onOpenSelector={() => user ? setShowSelector(true) : setShowLoginModal(true)}
+            user={user}
           />
         )}
 
-        {currentView === AppView.EmployerDashboard && user && (userRole === 'employer' || userRole === 'both') && (
+        {currentView === AppView.EmployerDashboard && user && userRole === 'employer' && (
           <EmployerDashboardView
             onNavigate={handleNavigate}
             gigs={gigs}
             onAddGig={handleAddGig}
             onLogout={() => {
-              logOut(); // This calls the logout from useAuth
+              logOut();
               setCurrentView(AppView.Landing);
             }}
           />
         )}
 
-        {currentView === AppView.WorkerBrowse && user && (userRole === 'worker' || userRole === 'both') && (
+        {currentView === AppView.WorkerBrowse && user && userRole === 'worker' && (
           <WorkerBrowseView
             onNavigate={handleNavigate}
             fallbackGigs={gigs}
@@ -111,9 +113,13 @@ export default function App() {
           />
         )}
 
-        {currentView === AppView.WorkerReliability && user && (userRole === 'worker' || userRole === 'both') && (
+        {currentView === AppView.WorkerReliability && user && userRole === 'worker' && (
           <WorkerReliabilityView
             onNavigate={handleNavigate}
+            onLogout={() => {
+              logOut();
+              setCurrentView(AppView.Landing);
+            }}
           />
         )}
       </div>
