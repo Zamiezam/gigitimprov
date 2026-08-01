@@ -62,3 +62,33 @@ export interface WorkHistoryItem {
   category: string;
   duration: string;
 }
+
+export interface EmployerReview {
+  id?: string;
+  employer_name: string;
+  worker_id?: string;
+  is_anonymous: boolean;
+  rating: number;
+  payment_promptness: number;
+  safety_rating: number;
+  comment?: string;
+  created_at?: string;
+}
+
+export interface Message {
+  id?: string;
+  sender_id: string;
+  receiver_id: string;
+  sender_name?: string;
+  content: string;
+  created_at?: string;
+}
+
+export interface Conversation {
+  partner_id: string;
+  partner_name: string;
+  partner_avatar?: string;
+  last_message: string;
+  last_message_time: string;
+  unread_count: number;
+}

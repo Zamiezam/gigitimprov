@@ -1,6 +1,6 @@
 // services/api.ts - Complete with all exports
 import { supabase } from '../supabaseClient';
-import { Gig, Applicant } from '../types';
+import { Gig, Applicant, EmployerReview } from '../types';
 import { GoogleGenAI } from '@google/genai';
 import { mockGigs, mockApplicants } from './mockApi';
 
@@ -262,4 +262,130 @@ export const api = {
       console.log('Status update simulated:', applicantId, status);
     }
   },
+
+  async getEmployerReviews(employerName: string): Promise<EmployerReview[]> {
+    try {
+      const { data, error } = await supabase
+        .from('employer_reviews')
+        .select('*')
+        .eq('employer_name', employerName)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      
+      // Mock data if none exists
+      if (!data || data.length === 0) {
+        return [
+          { employer_name: employerName, is_anonymous: true, rating: 4.5, payment_promptness: 5, safety_rating: 4, comment: "Great employer, paid right on time via DuitNow.", created_at: new Date(Date.now() - 86400000 * 2).toISOString() },
+          { employer_name: employerName, is_anonymous: true, rating: 4, payment_promptness: 4, safety_rating: 5, comment: "Very safe working environment. Will work for them again.", created_at: new Date(Date.now() - 86400000 * 10).toISOString() }
+        ];
+      }
+      
+      return data;
+    } catch (err) {
+      console.error('Error fetching employer reviews:', err);
+      return [];
+    }
+  },
+
+  async submitEmployerReview(review: Omit<EmployerReview, 'id' | 'created_at'>): Promise<void> {
+    try {
+      const { error } = await supabase
+        .from('employer_reviews')
+        .insert([review]);
+
+      if (error) throw error;
+    } catch (err) {
+      console.error('Error submitting review:', err);
+    }
+  },
+
+  // ── Messaging ──────────────────────────────────────────────────────
+  async getMessages(userId: string, partnerId: string): Promise<Message[]> {
+    try {
+      const { data, error } = await supabase
+        .from('messages')
+        .select('*')
+        .or(`and(sender_id.eq.${userId},receiver_id.eq.${partnerId}),and(sender_id.eq.${partnerId},receiver_id.eq.${userId})`)
+        .order('created_at', { ascending: true });
+
+      if (error) throw error;
+      return data ?? [];
+    } catch (err) {
+      console.error('Error fetching messages:', err);
+      return [];
+    }
+  },
+
+  async sendMessage(senderId: string, receiverId: string, content: string): Promise<void> {
+    try {
+      const { error } = await supabase
+        .from('messages')
+        .insert([{ sender_id: senderId, receiver_id: receiverId, content }]);
+      if (error) throw error;
+    } catch (err) {
+      console.error('Error sending message:', err);
+    }
+  },
+
+  async getConversations(userId: string): Promise<any[]> {
+    try {
+      const { data, error } = await supabase
+        .from('messages')
+        .select('*, sender:sender_id(*), receiver:receiver_id(*)')
+        .or(`sender_id.eq.${userId},receiver_id.eq.${userId}`)
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      // Group by partner
+      const seen = new Set<string>();
+      const convos: any[] = [];
+      for (const msg of data ?? []) {
+        const partnerId = msg.sender_id === userId ? msg.receiver_id : msg.sender_id;
+        if (!seen.has(partnerId)) {
+          seen.add(partnerId);
+          const partner = msg.sender_id === userId ? msg.receiver : msg.sender;
+          convos.push({
+            partner_id: partnerId,
+            partner_name: partner?.full_name || partner?.email || 'User',
+            partner_avatar: partner?.avatar_url,
+            last_message: msg.content,
+            last_message_time: msg.created_at,
+          });
+        }
+      }
+      return convos;
+    } catch (err) {
+      console.error('Error fetching conversations:', err);
+      return [];
+    }
+  },
+
+  // ── Availability ──────────────────────────────────────────────────
+  async setAvailability(userId: string, isAvailable: boolean): Promise<void> {
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({ is_available: isAvailable })
+        .eq('id', userId);
+      if (error) throw error;
+    } catch (err) {
+      console.error('Error setting availability:', err);
+    }
+  },
+
+  // ── Bonus/Tips ────────────────────────────────────────────────────
+  async sendBonus(hiredWorkerId: string, amount: number, message: string): Promise<void> {
+    try {
+      const { error } = await supabase
+        .from('hired_workers')
+        .update({ bonus_amount: amount, bonus_message: message, bonus_sent_at: new Date().toISOString() })
+        .eq('id', hiredWorkerId);
+      if (error) throw error;
+    } catch (err) {
+      console.error('Error sending bonus:', err);
+    }
+  },
 };
+
+// Re-export Message type for components
+export type { Message };

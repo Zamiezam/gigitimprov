@@ -1,12 +1,12 @@
 // components/HiredWorkers.tsx - Full database integration
 import { useState, useEffect } from 'react';
-import { supabase } from '../services/api';
+import { supabase, api } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   Users, Clock, CheckCircle, Star, Send, X, Calendar, 
   MapPin, Award, ThumbsUp, MessageCircle, Filter, Search,
-  DollarSign, CreditCard, Wallet, Check, AlertCircle, RefreshCw
+  DollarSign, CreditCard, Wallet, Check, AlertCircle, RefreshCw, Gift
 } from 'lucide-react';
 import { usePayment } from '../context/PaymentContext';
 
@@ -51,6 +51,13 @@ export default function HiredWorkers() {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'completed' | 'verified'>('all');
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  // Bonus modal
+  const [showBonusModal, setShowBonusModal] = useState(false);
+  const [bonusWorker, setBonusWorker] = useState<HiredWorker | null>(null);
+  const [bonusAmount, setBonusAmount] = useState('');
+  const [bonusMessage, setBonusMessage] = useState('');
+  const [sendingBonus, setSendingBonus] = useState(false);
 
   useEffect(() => {
     if (user) {
@@ -434,6 +441,14 @@ export default function HiredWorkers() {
                         <CheckCircle size={12} /> Verified
                       </span>
                     )}
+                    {(worker.status === 'completed' || worker.status === 'verified' || worker.payment_status === 'paid') && (
+                      <button
+                        onClick={() => { setBonusWorker(worker); setBonusAmount(''); setBonusMessage('Great work!'); setShowBonusModal(true); }}
+                        className="px-3 py-2 bg-amber-500 hover:bg-amber-600 text-white rounded-lg text-xs font-bold transition-all flex items-center gap-1 cursor-pointer"
+                      >
+                        <Gift size={13} /> Send Bonus
+                      </button>
+                    )}
                   </div>
                 </div>
               </div>
@@ -443,6 +458,78 @@ export default function HiredWorkers() {
       )}
 
       {/* Review Modal */}
+      {/* Bonus Modal */}
+      <AnimatePresence>
+        {showBonusModal && bonusWorker && (
+          <div className="fixed inset-0 z-[500] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm" onClick={() => setShowBonusModal(false)}>
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              onClick={e => e.stopPropagation()}
+              className="bg-surface rounded-2xl shadow-xl p-6 w-full max-w-sm"
+            >
+              <div className="flex items-center gap-3 mb-5">
+                <div className="w-10 h-10 bg-amber-100 rounded-xl flex items-center justify-center">
+                  <Gift size={20} className="text-amber-600" />
+                </div>
+                <div>
+                  <h3 className="font-display font-bold text-base text-on-surface">Send Bonus / Tip</h3>
+                  <p className="text-xs text-on-surface-variant">To {bonusWorker.worker_name}</p>
+                </div>
+              </div>
+              <div className="space-y-4">
+                <div>
+                  <label className="text-xs font-bold text-on-surface-variant uppercase tracking-wider">Bonus Amount (RM)</label>
+                  <div className="relative mt-1">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm font-bold text-on-surface-variant">RM</span>
+                    <input
+                      type="number"
+                      value={bonusAmount}
+                      onChange={e => setBonusAmount(e.target.value)}
+                      min="1" max="500"
+                      placeholder="0.00"
+                      className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-outline-variant bg-surface-container-low text-sm font-bold focus:outline-none focus:border-primary"
+                    />
+                  </div>
+                  <div className="flex gap-2 mt-2">
+                    {[5, 10, 20, 50].map(v => (
+                      <button key={v} onClick={() => setBonusAmount(String(v))} className={`flex-1 py-1.5 rounded-lg text-xs font-bold border transition-colors cursor-pointer ${bonusAmount === String(v) ? 'bg-amber-500 text-white border-amber-500' : 'border-outline-variant text-on-surface hover:bg-surface-container'}`}>RM{v}</button>
+                    ))}
+                  </div>
+                </div>
+                <div>
+                  <label className="text-xs font-bold text-on-surface-variant uppercase tracking-wider">Message</label>
+                  <textarea
+                    value={bonusMessage}
+                    onChange={e => setBonusMessage(e.target.value)}
+                    rows={2}
+                    className="w-full mt-1 px-3 py-2.5 rounded-xl border border-outline-variant bg-surface-container-low text-sm focus:outline-none focus:border-primary resize-none"
+                  />
+                </div>
+              </div>
+              <div className="flex gap-3 mt-6">
+                <button onClick={() => setShowBonusModal(false)} className="flex-1 py-2.5 border border-outline-variant rounded-xl text-sm font-bold cursor-pointer hover:bg-surface-container">Cancel</button>
+                <button
+                  disabled={!bonusAmount || Number(bonusAmount) <= 0 || sendingBonus}
+                  onClick={async () => {
+                    setSendingBonus(true);
+                    await api.sendBonus(bonusWorker.id, Number(bonusAmount), bonusMessage);
+                    setSendingBonus(false);
+                    setShowBonusModal(false);
+                    setToastMessage(`🎉 RM${bonusAmount} bonus sent to ${bonusWorker.worker_name}!`);
+                    setTimeout(() => setToastMessage(null), 4000);
+                  }}
+                  className="flex-1 py-2.5 bg-amber-500 hover:bg-amber-600 text-white rounded-xl text-sm font-bold disabled:opacity-50 cursor-pointer transition-colors flex items-center justify-center gap-1.5"
+                >
+                  {sendingBonus ? <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> : <><Gift size={14} /> Send RM{bonusAmount || '0'}</>}
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
       <AnimatePresence>
         {showReviewModal && selectedWorker && (
           <div className="fixed inset-0 z-[400] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm" onClick={() => setShowReviewModal(false)}>

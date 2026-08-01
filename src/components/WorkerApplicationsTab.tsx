@@ -8,6 +8,7 @@ import {
   Award, ArrowRight
 } from 'lucide-react';
 import ClockInOut from './ClockInOut';
+import EmployerRatingModal from './EmployerRatingModal';
 
 interface AppItem {
   id: string;
@@ -33,6 +34,7 @@ export default function WorkerApplicationsTab() {
   const [activeTab, setActiveTab] = useState<'pending' | 'approved' | 'completed' | 'rejected'>('approved');
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [employerToRate, setEmployerToRate] = useState<string | null>(null);
   
   // DB states
   const [applications, setApplications] = useState<AppItem[]>([]);
@@ -369,6 +371,12 @@ export default function WorkerApplicationsTab() {
                         ) : (
                           <span className="px-2.5 py-1 bg-amber-50 text-amber-700 font-bold text-[10px] rounded-lg border border-amber-200">Verification Pending</span>
                         )}
+                        <button 
+                          onClick={() => setEmployerToRate(shift.employer_name || 'KK Business')}
+                          className="text-[10px] bg-primary/10 text-primary hover:bg-primary/20 font-bold px-2 py-1 rounded-lg transition-colors border border-primary/20 flex items-center gap-1 cursor-pointer mt-1"
+                        >
+                          <Star size={10} /> Rate Employer
+                        </button>
                       </div>
                     </div>
 
@@ -446,6 +454,17 @@ export default function WorkerApplicationsTab() {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {employerToRate && (
+        <EmployerRatingModal
+          employerName={employerToRate}
+          onClose={() => setEmployerToRate(null)}
+          onSubmitSuccess={() => {
+            setEmployerToRate(null);
+            showToast('Thank you for rating! Your review helps keep the community transparent. 🌟');
+          }}
+        />
+      )}
     </div>
   );
 }

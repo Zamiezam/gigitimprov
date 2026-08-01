@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useCallback } from 'react';
 import { AppView, Gig } from '../types';
 import { initialGigs } from '../data';
 import { api, supabase } from '../services/api';
@@ -8,6 +8,9 @@ import L from 'leaflet';
 import ClockInOut from './ClockInOut';
 import WorkerProfileSettings from './WorkerProfileSettings';
 import WorkerApplicationsTab from './WorkerApplicationsTab';
+import EmployerInsightsModal from './EmployerInsightsModal';
+import JSSBadge from './JSSBadge';
+import DirectMessaging from './DirectMessaging';
 import {
   Bell,
   User,
@@ -25,6 +28,9 @@ import {
   TrendingUp,
   CreditCard,
   HelpCircle,
+  Bookmark,
+  MessageSquare,
+  BookmarkCheck,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import WorkerReliabilityView from './WorkerReliabilityView';
@@ -58,9 +64,19 @@ export default function WorkerBrowseView({
   // ── UI state ────────────────────────────────────────────────
   const [selectedCategory, setSelectedCategory] = useState<string>('All Types');
   const [activeTab, setActiveTab] = useState<string>(initialTab ?? 'Dashboard');
+  const [showInsightsForEmployer, setShowInsightsForEmployer] = useState<string | null>(null);
   const [userGigs, setUserGigs] = useState<Record<string, 'Applied' | 'Booked'>>({});
   const [showMapOnMobile, setShowMapOnMobile] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  // ── Upwork Features State ────────────────────────────────────
+  const [savedGigIds, setSavedGigIds] = useState<Set<string>>(() => {
+    try { return new Set(JSON.parse(localStorage.getItem('gigit_saved_gigs') || '[]')); }
+    catch { return new Set(); }
+  });
+  const [isAvailable, setIsAvailable] = useState<boolean>(() => {
+    return localStorage.getItem('gigit_available') === 'true';
+  });
 
   // ── Integration state ─────────────────────────────────────────────
   const [gigs, setGigs] = useState<Gig[]>([]);
@@ -291,6 +307,29 @@ export default function WorkerBrowseView({
     setTimeout(() => setToastMessage(null), delay);
   };
 
+  // ── Saved Gigs helpers ───────────────────────────────────────
+  const toggleSaveGig = useCallback((gigId: string) => {
+    setSavedGigIds(prev => {
+      const next = new Set(prev);
+      if (next.has(gigId)) { next.delete(gigId); toast('Gig removed from saved list.'); }
+      else { next.add(gigId); toast('📌 Gig saved! View in Saved Gigs tab.'); }
+      localStorage.setItem('gigit_saved_gigs', JSON.stringify([...next]));
+      return next;
+    });
+  }, []);
+
+  // ── Availability toggle ──────────────────────────────────────
+  const toggleAvailability = useCallback(async () => {
+    const next = !isAvailable;
+    setIsAvailable(next);
+    localStorage.setItem('gigit_available', String(next));
+    if (user) await api.setAvailability(user.id, next);
+    toast(next ? '🟢 You are now marked as Available!' : '🔴 Availability set to Offline.');
+  }, [isAvailable, user]);
+
+  // ── JSS Score from reliability score ────────────────────────
+  const jssScore = Math.round(parseFloat(profile?.reliability_score || '4.8') * 20);
+
   const workerName = profile?.full_name || user?.email?.split('@')[0] || 'Ahmad Rosli';
   const workerAvatar = profile?.avatar_url || 'https://randomuser.me/api/portraits/men/32.jpg';
 
@@ -370,11 +409,20 @@ export default function WorkerBrowseView({
             </div>
           </div>
 
+          {/* JSS Badge in sidebar */}
+          <div className="px-6 mb-4">
+            <div className="bg-surface border border-outline-variant rounded-2xl p-3">
+              <JSSBadge score={jssScore} size="sm" showLabel={true} />
+            </div>
+          </div>
+
           {/* Nav links */}
           <nav className="flex-1 space-y-1">
             {[
               { id: 'Dashboard',      icon: 'dashboard',      label: 'Dashboard'      },
               { id: 'MyApplications', icon: 'list_alt',       label: 'My Gigs/Apps'   },
+              { id: 'SavedGigs',      icon: 'bookmarks',      label: `Saved (${savedGigIds.size})`  },
+              { id: 'Messages',       icon: 'chat',           label: 'Messages'       },
               { id: 'Reliability',    icon: 'verified_user',  label: 'My Reliability' },
               { id: 'Earnings',       icon: 'payments',       label: 'Earnings'       },
               { id: 'Profile',        icon: 'person',         label: 'My Profile'     },
@@ -595,6 +643,15 @@ export default function WorkerBrowseView({
                                     <span className="font-display font-bold text-lg text-secondary leading-none">{g.rate}</span>
                                   </div>
                                   <h3 className="font-display font-bold text-lg text-on-surface mt-2 group-hover:text-primary transition-colors">{g.title}</h3>
+                                  <div className="flex items-center gap-2 mt-1">
+                                    <p className="text-xs text-on-surface-variant font-medium">{g.employer}</p>
+                                    <button 
+                                      onClick={(e) => { e.stopPropagation(); setShowInsightsForEmployer(g.employer); }}
+                                      className="text-[10px] bg-primary/10 text-primary font-bold px-2 py-0.5 rounded-full hover:bg-primary/20 transition-colors cursor-pointer flex items-center gap-1"
+                                    >
+                                      <Star size={10} /> Insights
+                                    </button>
+                                  </div>
                                   <p className="text-xs text-on-surface-variant mt-2 font-sans leading-relaxed">{g.description}</p>
                                 </div>
 
@@ -636,18 +693,30 @@ export default function WorkerBrowseView({
                                   {g.category === 'F&B' ? 'restaurant' : g.category === 'Logistics' ? 'local_shipping' : g.category === 'Cleaning' ? 'cleaning_services' : 'campaign'}
                                 </span>
                               </div>
-                              <div className="text-right">
+                              <div className="flex items-center gap-2">
+                                <button
+                                  onClick={(e) => { e.stopPropagation(); toggleSaveGig(g.id); }}
+                                  title={savedGigIds.has(g.id) ? 'Remove bookmark' : 'Save gig'}
+                                  className="p-1.5 rounded-full hover:bg-surface-container-high transition-colors cursor-pointer"
+                                >
+                                  {savedGigIds.has(g.id)
+                                    ? <BookmarkCheck size={16} className="text-primary" fill="currentColor" />
+                                    : <Bookmark size={16} className="text-on-surface-variant" />}
+                                </button>
                                 <span className="font-display font-semibold text-base text-secondary">{g.rate}</span>
-                                {g.isInstant && (
-                                  <div className="text-[8px] bg-tertiary/10 border border-tertiary/30 px-1.5 py-0.5 rounded text-tertiary font-bold uppercase tracking-wider mt-1 text-center">
-                                    INSTANT
-                                  </div>
-                                )}
                               </div>
                             </div>
 
                             <h3 className="font-semibold text-on-surface text-sm mt-4">{g.title}</h3>
-                            <p className="text-[11px] font-medium text-on-surface-variant mt-1">{g.employer}</p>
+                            <div className="flex justify-between items-center mt-1">
+                              <p className="text-[11px] font-medium text-on-surface-variant">{g.employer}</p>
+                              <button 
+                                onClick={(e) => { e.stopPropagation(); setShowInsightsForEmployer(g.employer); }}
+                                className="text-[9px] bg-primary/10 text-primary font-bold px-1.5 py-0.5 rounded-full hover:bg-primary/20 transition-colors cursor-pointer flex items-center gap-0.5"
+                              >
+                                <Star size={9} /> Insights
+                              </button>
+                            </div>
 
                             <div className="flex flex-wrap gap-1.5 mt-4">
                               <span className="bg-surface-container text-on-surface-variant text-[10px] px-2.5 py-1 rounded-full font-semibold">{g.distance}</span>
@@ -692,6 +761,64 @@ export default function WorkerBrowseView({
           {activeTab === 'MyApplications' && (
             <div className="max-w-7xl mx-auto px-4 md:px-8 mt-4">
               <WorkerApplicationsTab />
+            </div>
+          )}
+
+          {/* ── TAB: SavedGigs ─────────────────────────────────────────────── */}
+          {activeTab === 'SavedGigs' && (
+            <div className="max-w-5xl mx-auto px-4 md:px-8 mt-4">
+              <div className="border-b border-outline-variant pb-4 mb-6">
+                <h1 className="font-display font-bold text-xl md:text-2xl text-primary flex items-center gap-2">
+                  <BookmarkCheck size={22} /> Saved Gigs
+                </h1>
+                <p className="text-xs text-on-surface-variant mt-1 font-medium">Gigs you've bookmarked for later. {savedGigIds.size} saved.</p>
+              </div>
+              {savedGigIds.size === 0 ? (
+                <div className="text-center py-16 bg-surface-container-lowest border border-outline-variant rounded-2xl border-dashed">
+                  <Bookmark size={40} className="mx-auto text-on-surface-variant mb-3" />
+                  <p className="text-sm font-bold text-on-surface">No saved gigs yet</p>
+                  <p className="text-xs text-on-surface-variant mt-1">Click the bookmark icon on any gig to save it here.</p>
+                  <button onClick={() => setActiveTab('Dashboard')} className="mt-4 bg-primary text-white text-xs font-bold px-5 py-2.5 rounded-xl hover:bg-primary/90 transition-colors cursor-pointer">Browse Gigs</button>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {gigs.filter(g => savedGigIds.has(g.id)).map(g => (
+                    <div key={g.id} className="flex flex-col justify-between rounded-xl bg-white border border-primary/30 p-5 hover:shadow-md transition-all border-l-4 border-l-primary">
+                      <div>
+                        <div className="flex justify-between items-start">
+                          <span className="text-[9px] bg-primary/10 text-primary font-bold px-2 py-0.5 rounded-full uppercase tracking-wider">📌 Saved</span>
+                          <button onClick={() => toggleSaveGig(g.id)} className="p-1 hover:bg-surface-container rounded-full cursor-pointer">
+                            <BookmarkCheck size={14} className="text-primary" fill="currentColor" />
+                          </button>
+                        </div>
+                        <h3 className="font-semibold text-on-surface text-sm mt-3">{g.title}</h3>
+                        <p className="text-[11px] font-medium text-on-surface-variant mt-0.5">{g.employer}</p>
+                        <div className="flex flex-wrap gap-1.5 mt-3">
+                          <span className="bg-surface-container text-on-surface-variant text-[10px] px-2.5 py-1 rounded-full font-semibold">{g.rate}</span>
+                          <span className="bg-surface-container text-on-surface-variant text-[10px] px-2.5 py-1 rounded-full font-semibold">{g.distance}</span>
+                        </div>
+                      </div>
+                      <div className="mt-4 pt-4 border-t border-surface-container-high flex gap-2">
+                        <button onClick={() => setSelectedGig(g)} className="flex-1 py-2 border border-outline-variant rounded-lg text-xs font-bold text-on-surface hover:bg-surface-container transition-all cursor-pointer">Details</button>
+                        <button onClick={() => handleApply(g.id, g.title, g.isInstant)} className="flex-1 py-2 bg-primary text-white rounded-lg text-xs font-bold hover:bg-primary/90 cursor-pointer transition-colors">{g.isInstant ? 'Book Now' : 'Apply'}</button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* ── TAB: Messages ──────────────────────────────────────────────── */}
+          {activeTab === 'Messages' && (
+            <div className="max-w-5xl mx-auto px-4 md:px-8 mt-4">
+              <div className="border-b border-outline-variant pb-4 mb-6">
+                <h1 className="font-display font-bold text-xl md:text-2xl text-primary flex items-center gap-2">
+                  <MessageSquare size={22} /> Direct Messages
+                </h1>
+                <p className="text-xs text-on-surface-variant mt-1 font-medium">Chat with employers about your gigs.</p>
+              </div>
+              <DirectMessaging />
             </div>
           )}
 
@@ -893,7 +1020,15 @@ export default function WorkerBrowseView({
               <div className="flex justify-between items-start gap-3">
                 <div>
                   <h2 className="font-bold text-xl text-on-surface leading-tight">{selectedGig.title}</h2>
-                  <p className="text-sm text-on-surface-variant mt-0.5 font-medium">{selectedGig.employer}</p>
+                  <div className="flex items-center gap-2 mt-0.5">
+                    <p className="text-sm text-on-surface-variant font-medium">{selectedGig.employer}</p>
+                    <button 
+                      onClick={(e) => { e.stopPropagation(); setShowInsightsForEmployer(selectedGig.employer); }}
+                      className="text-[10px] bg-primary/10 text-primary font-bold px-2 py-0.5 rounded-full hover:bg-primary/20 transition-colors cursor-pointer flex items-center gap-1"
+                    >
+                      <Star size={10} /> Insights
+                    </button>
+                  </div>
                 </div>
                 <button onClick={() => setSelectedGig(null)} className="text-on-surface-variant hover:text-on-surface p-1 cursor-pointer">
                   <X size={20} />
@@ -982,11 +1117,17 @@ export default function WorkerBrowseView({
           </div>
           <span className="text-[10px] font-semibold mt-1">Gigs</span>
         </button>
-        <button onClick={() => setActiveTab('MyApplications')} className={`flex flex-col items-center ${activeTab === 'MyApplications' ? 'text-primary' : 'text-on-surface-variant'}`}>
-          <div className={`p-1 px-4 rounded-full ${activeTab === 'MyApplications' ? 'bg-primary/10' : ''}`}>
-            <span className="material-symbols-outlined text-md">list_alt</span>
+        <button onClick={() => setActiveTab('Messages')} className={`flex flex-col items-center ${activeTab === 'Messages' ? 'text-primary' : 'text-on-surface-variant'}`}>
+          <div className={`p-1 px-4 rounded-full ${activeTab === 'Messages' ? 'bg-primary/10' : ''}`}>
+            <span className="material-symbols-outlined text-md">chat</span>
           </div>
-          <span className="text-[10px] font-semibold mt-1">My Gigs</span>
+          <span className="text-[10px] font-semibold mt-1">Messages</span>
+        </button>
+        <button onClick={() => setActiveTab('SavedGigs')} className={`flex flex-col items-center ${activeTab === 'SavedGigs' ? 'text-primary' : 'text-on-surface-variant'}`}>
+          <div className={`p-1 px-4 rounded-full ${activeTab === 'SavedGigs' ? 'bg-primary/10' : ''}`}>
+            <span className="material-symbols-outlined text-md">bookmarks</span>
+          </div>
+          <span className="text-[10px] font-semibold mt-1">Saved</span>
         </button>
         <button onClick={() => setActiveTab('Reliability')} className={`flex flex-col items-center ${activeTab === 'Reliability' ? 'text-primary' : 'text-on-surface-variant'}`}>
           <div className={`p-1 px-4 rounded-full ${activeTab === 'Reliability' ? 'bg-primary/10' : ''}`}>
@@ -995,6 +1136,13 @@ export default function WorkerBrowseView({
           <span className="text-[10px] font-semibold mt-1">Reliability</span>
         </button>
       </div>
+
+      {showInsightsForEmployer && (
+        <EmployerInsightsModal 
+          employerName={showInsightsForEmployer} 
+          onClose={() => setShowInsightsForEmployer(null)} 
+        />
+      )}
     </div>
   );
 }

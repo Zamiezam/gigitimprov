@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { supabase, verifyStudentIdWithAI } from '../services/api';
+import { supabase, verifyStudentIdWithAI, api } from '../services/api';
+import JSSBadge from './JSSBadge';
 import { useAuth } from '../context/AuthContext';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
@@ -44,6 +45,8 @@ export default function WorkerProfileSettings() {
   const [customAvatarUrl, setCustomAvatarUrl] = useState('');
   const [newSkill, setNewSkill] = useState('');
   const [aiVerificationResult, setAiVerificationResult] = useState<any>(null);
+  const [isAvailable, setIsAvailable] = useState<boolean>(() => localStorage.getItem('gigit_available') === 'true');
+  const [togglingAvailability, setTogglingAvailability] = useState(false);
 
   useEffect(() => {
     if (user) {
@@ -503,7 +506,41 @@ export default function WorkerProfileSettings() {
                   </div>
                 </div>
 
-                {/* Save changes button */}
+                  {/* Availability Toggle */}
+                  <div className="mt-4 p-4 bg-surface-container-low rounded-2xl border border-outline-variant">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-bold text-on-surface flex items-center gap-2">
+                          <span className={`w-2.5 h-2.5 rounded-full ${isAvailable ? 'bg-green-500 animate-pulse' : 'bg-outline-variant'}`} />
+                          {isAvailable ? '🟢 Available for Work' : '🔴 Offline / Unavailable'}
+                        </p>
+                        <p className="text-[10px] text-on-surface-variant mt-0.5 font-medium">
+                          {isAvailable ? 'Employers can see you are ready for new gigs.' : 'Toggle ON to let employers know you are available now.'}
+                        </p>
+                      </div>
+                      <button
+                        onClick={async () => {
+                          setTogglingAvailability(true);
+                          const next = !isAvailable;
+                          setIsAvailable(next);
+                          localStorage.setItem('gigit_available', String(next));
+                          if (user) await api.setAvailability(user.id, next);
+                          showToast(next ? '🟢 You are now marked as Available!' : '🔴 Availability set to Offline.');
+                          setTogglingAvailability(false);
+                        }}
+                        disabled={togglingAvailability}
+                        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors cursor-pointer focus:outline-none ${isAvailable ? 'bg-green-500' : 'bg-outline-variant/40'}`}
+                      >
+                        <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow-md transition-transform ${isAvailable ? 'translate-x-6' : 'translate-x-1'}`} />
+                      </button>
+                    </div>
+                    <div className="mt-3 pt-3 border-t border-outline-variant/40">
+                      <p className="text-[9px] text-on-surface-variant font-bold uppercase tracking-wider mb-2">Your JSS Score</p>
+                      <JSSBadge score={Math.round(parseFloat('4.8') * 20)} size="sm" showLabel={true} />
+                    </div>
+                  </div>
+
+                  {/* Save changes button */}
                 <div className="pt-4 border-t border-outline-variant/60 flex justify-end">
                   <button 
                     onClick={handleSave} 
