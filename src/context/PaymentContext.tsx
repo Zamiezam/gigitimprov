@@ -36,58 +36,57 @@ export function PaymentProvider({ children }: { children: ReactNode }) {
     setLoading(true);
     try {
       // Fetch or create wallet balance
-      let { data: wallet, error: walletError } = await supabase
-        .from('wallets')
-        .select('balance')
-        .eq('user_id', user.id)
-        .single();
-
-      if (walletError && walletError.code === 'PGRST116') {
-        // Wallet doesn't exist, create one
-        const { data: newWallet, error: createError } = await supabase
+      let walletBalance = 500; // Default demo balance
+      try {
+        let { data: wallet, error: walletError } = await supabase
           .from('wallets')
-          .insert([{ user_id: user.id, balance: 500 }])
-          .select()
+          .select('balance')
+          .eq('user_id', user.id)
           .single();
-        
-        if (!createError && newWallet) {
-          wallet = newWallet;
+
+        if (walletError && walletError.code === 'PGRST116') {
+          // Wallet doesn't exist, create one
+          const { data: newWallet } = await supabase
+            .from('wallets')
+            .insert([{ user_id: user.id, balance: 500 }])
+            .select()
+            .single();
+          if (newWallet) wallet = newWallet;
         }
-      } else if (walletError) {
-        throw walletError;
-      }
+        if (wallet?.balance !== undefined) walletBalance = wallet.balance;
+      } catch { /* wallets table may not exist yet, use default */ }
       
-      setWalletBalance(wallet?.balance || 0);
+      setWalletBalance(walletBalance);
       
       // Fetch pending workers (verified status, pending payment)
-      const { data: hiredWorkers, error: workersError } = await supabase
-        .from('hired_workers')
-        .select('*')
-        .eq('employer_id', user.id)
-        .eq('status', 'verified')
-        .eq('payment_status', 'pending');
-      
-      if (workersError) throw workersError;
-      
-      const workersWithAmounts = (hiredWorkers || []).map(w => ({
-        ...w,
-        amount: w.amount || 0
-      }));
-      
-      setPendingWorkers(workersWithAmounts);
-      setTotalPendingPayments(calculateTotalPending(workersWithAmounts));
+      try {
+        const { data: hiredWorkers } = await supabase
+          .from('hired_workers')
+          .select('*')
+          .eq('employer_id', user.id)
+          .eq('status', 'verified')
+          .eq('payment_status', 'pending');
+        
+        const workersWithAmounts = (hiredWorkers || []).map(w => ({
+          ...w,
+          amount: w.amount || 0
+        }));
+        
+        setPendingWorkers(workersWithAmounts);
+        setTotalPendingPayments(calculateTotalPending(workersWithAmounts));
+      } catch { /* hired_workers table may not exist yet */ }
       
       // Fetch transactions
-      const { data: txns, error: txError } = await supabase
-        .from('wallet_transactions')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false })
-        .limit(20);
-      
-      if (txError) throw txError;
-      
-      setTransactions(txns || []);
+      try {
+        const { data: txns } = await supabase
+          .from('wallet_transactions')
+          .select('*')
+          .eq('user_id', user.id)
+          .order('created_at', { ascending: false })
+          .limit(20);
+        
+        setTransactions(txns || []);
+      } catch { /* wallet_transactions table may not exist yet */ }
       
     } catch (err) {
       console.error('Error refreshing payments:', err);

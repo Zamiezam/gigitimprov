@@ -6,13 +6,16 @@ import 'leaflet/dist/leaflet.css';
 import './index.css';
 import { AuthProvider } from './context/AuthContext';
 import { PaymentProvider } from './context/PaymentContext';
+import { ErrorBoundary } from './components/ErrorBoundary';
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <AuthProvider>
-      <PaymentProvider>
-        <App />
-      </PaymentProvider>
-    </AuthProvider>
+    <ErrorBoundary>
+      <AuthProvider>
+        <PaymentProvider>
+          <App />
+        </PaymentProvider>
+      </AuthProvider>
+    </ErrorBoundary>
   </StrictMode>,
 );
