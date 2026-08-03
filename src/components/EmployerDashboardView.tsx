@@ -552,7 +552,7 @@ export default function EmployerDashboardView({ onNavigate, gigs, onAddGig, onLo
         {/* Sidebar */}
         <aside className="hidden md:flex flex-col h-[calc(100vh-64px)] fixed left-0 top-16 w-64 py-6 bg-surface-container-lowest border-r border-outline-variant">
           <div className="px-6 mb-8">
-            <h2 className="font-display font-bold text-lg text-primary">Employer Portal</h2>
+            <h2 className="font-display font-bold text-lg text-primary">CEDEC Employer Hub</h2>
             <p className="text-xs text-on-surface-variant font-medium truncate">{user?.email || 'employer@example.com'}</p>
           </div>
           
@@ -577,7 +577,7 @@ export default function EmployerDashboardView({ onNavigate, gigs, onAddGig, onLo
               }`}
             >
               <Briefcase size={18} />
-              <span className="text-sm">My Gigs ({currentActiveGigsCount})</span>
+              <span className="text-sm">My Opportunities ({currentActiveGigsCount})</span>
             </button>
             <button 
               onClick={() => setCurrentSubView('hired')} 
@@ -588,7 +588,7 @@ export default function EmployerDashboardView({ onNavigate, gigs, onAddGig, onLo
               }`}
             >
               <Users size={18} />
-              <span className="text-sm">Hired Workers</span>
+              <span className="text-sm">Escrow & Wages</span>
             </button>
             <button 
               onClick={() => setCurrentSubView('settings')} 
@@ -767,16 +767,46 @@ export default function EmployerDashboardView({ onNavigate, gigs, onAddGig, onLo
               </AnimatePresence>
 
               {/* Header */}
+              {/* Welcome Onboarding Banner */}
+              {myGigs.length === 0 && (
+                <div className="bg-gradient-to-br from-primary/10 via-primary/5 to-transparent border border-primary/20 rounded-2xl p-6 relative overflow-hidden">
+                  <div className="absolute top-0 right-0 w-40 h-40 bg-primary/10 rounded-full blur-3xl -mr-10 -mt-10"></div>
+                  <div className="relative z-10">
+                    <h2 className="font-display font-bold text-xl text-primary flex items-center gap-2">👋 Welcome to CEDEC Employer Hub!</h2>
+                    <p className="text-sm text-on-surface-variant mt-2 max-w-xl leading-relaxed">
+                      Post campus job opportunities, review verified UMS student applicants, and manage your shifts — all in one place.
+                    </p>
+                    <div className="mt-4 grid grid-cols-1 sm:grid-cols-3 gap-3">
+                      <div className="bg-white/80 rounded-xl p-3 border border-outline-variant">
+                        <span className="text-lg">1️⃣</span>
+                        <p className="text-xs font-bold text-on-surface mt-1">Post Opportunity</p>
+                        <p className="text-[10px] text-on-surface-variant">Click "Post New Opportunity" below</p>
+                      </div>
+                      <div className="bg-white/80 rounded-xl p-3 border border-outline-variant">
+                        <span className="text-lg">2️⃣</span>
+                        <p className="text-xs font-bold text-on-surface mt-1">Review Students</p>
+                        <p className="text-[10px] text-on-surface-variant">Students apply, you pick the best</p>
+                      </div>
+                      <div className="bg-white/80 rounded-xl p-3 border border-outline-variant">
+                        <span className="text-lg">3️⃣</span>
+                        <p className="text-xs font-bold text-on-surface mt-1">Track & Pay</p>
+                        <p className="text-[10px] text-on-surface-variant">Clock-in tracking & escrow payment</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                 <div>
                   <h1 className="font-display font-bold text-2xl md:text-3xl text-on-surface">{getGreeting()}</h1>
                   <p className="text-sm text-on-surface-variant mt-1">
-                    {totalApplicants} total applicants • {currentActiveGigsCount} active gigs
+                    {totalApplicants} total applicants • {currentActiveGigsCount} active opportunities
                   </p>
                 </div>
                 <button onClick={() => setShowPostModal(true)} className="bg-primary text-white px-6 py-3 rounded-xl shadow-md font-bold hover:bg-primary/95 transition-all flex items-center gap-1.5">
                   <Plus size={18} />
-                  <span>Post New Gig</span>
+                  <span>Post New Opportunity</span>
                 </button>
               </div>
 
@@ -927,6 +957,30 @@ export default function EmployerDashboardView({ onNavigate, gigs, onAddGig, onLo
         </main>
       </div>
 
+      {/* Mobile Bottom Nav */}
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white border-t border-outline-variant flex justify-around items-center h-16 shadow-lg">
+        {[
+          { id: 'dashboard', icon: <Home size={20} />, label: 'Dashboard' },
+          { id: 'mygigs', icon: <Briefcase size={20} />, label: 'Opportunities' },
+          { id: 'hired', icon: <Users size={20} />, label: 'Escrow' },
+          { id: 'wallet', icon: <CreditCard size={20} />, label: 'Wallet' },
+          { id: 'settings', icon: <Settings size={20} />, label: 'Settings' },
+        ].map(tab => (
+          <button
+            key={tab.id}
+            onClick={() => setCurrentSubView(tab.id as any)}
+            className={`flex flex-col items-center gap-0.5 py-1 px-2 transition-colors ${
+              currentSubView === tab.id
+                ? 'text-primary font-bold'
+                : 'text-on-surface-variant'
+            }`}
+          >
+            {tab.icon}
+            <span className="text-[9px] font-semibold">{tab.label}</span>
+          </button>
+        ))}
+      </nav>
+
       {/* Post Gig Modal */}
       <AnimatePresence>
         {showPostModal && (
@@ -934,7 +988,7 @@ export default function EmployerDashboardView({ onNavigate, gigs, onAddGig, onLo
             <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }}
               className="bg-white rounded-2xl max-w-2xl w-full overflow-hidden shadow-2xl border border-outline-variant">
               <div className="px-6 py-4 border-b border-outline-variant bg-surface flex justify-between items-center">
-                <h3 className="font-display font-bold text-base text-primary">Post a New Student Gig</h3>
+                <h3 className="font-display font-bold text-base text-primary">Post a New Campus Opportunity</h3>
                 <button onClick={() => setShowPostModal(false)}><X size={20} /></button>
               </div>
               <div className="p-6">
