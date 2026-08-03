@@ -135,6 +135,30 @@ export default function WorkerBrowseView({
     }
   }, [user]);
 
+  // ── Fetch applied gigs to sync status ──────
+  useEffect(() => {
+    if (!user) return;
+    async function loadUserApps() {
+      try {
+        const { data, error } = await supabase
+          .from('applicants')
+          .select('gig_id, status')
+          .eq('worker_id', user.id);
+        
+        if (!error && data) {
+          const syncState: Record<string, 'Applied' | 'Booked'> = {};
+          data.forEach(app => {
+            syncState[app.gig_id] = app.status === 'Hired' ? 'Booked' : 'Applied';
+          });
+          setUserGigs(syncState);
+        }
+      } catch (err) {
+        console.error('Failed to sync applications', err);
+      }
+    }
+    loadUserApps();
+  }, [user]);
+
   // ── Fetch real gigs from Supabase + Subscribe ──────
   useEffect(() => {
     async function loadGigs() {

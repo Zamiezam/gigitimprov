@@ -1,6 +1,6 @@
 // services/api.ts - Complete with all exports
 import { supabase } from '../supabaseClient';
-import { Gig, Applicant, EmployerReview } from '../types';
+import { Gig, Applicant, EmployerReview, Message } from '../types';
 import { GoogleGenAI } from '@google/genai';
 import { mockGigs, mockApplicants } from './mockApi';
 

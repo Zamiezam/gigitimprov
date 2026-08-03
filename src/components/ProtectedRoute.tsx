@@ -22,16 +22,11 @@ export function ProtectedRoute({ children, allowedRoles }: ProtectedRouteProps) 
     return <Navigate to="/login" replace />;
   }
 
-<<<<<<< HEAD
   if (allowedRoles && userRole) {
     const isAllowed = userRole === 'both' || (allowedRoles as string[]).includes(userRole);
     if (!isAllowed) {
       return <Navigate to="/unauthorized" replace />;
     }
-=======
-  if (allowedRoles && !allowedRoles.includes(userRole)) {
-    return <Navigate to="/unauthorized" replace />;
->>>>>>> 300916bfc670fd9f36d1c6b8762c746978596937
   }
 
   return <>{children}</>;

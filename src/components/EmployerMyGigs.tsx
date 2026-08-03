@@ -36,6 +36,28 @@ export default function EmployerMyGigs({ onNavigate, onPostNewGig }: EmployerMyG
   // Fetch employer's gigs
   useEffect(() => {
     fetchMyGigs();
+
+    if (!user) return;
+
+    // Real-time updates for new applicants
+    const appChannel = supabase
+      .channel('public:applicants_employer_gigs')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'applicants' }, () => {
+        fetchMyGigs();
+      })
+      .subscribe();
+
+    const gigChannel = supabase
+      .channel('public:gigs_employer_gigs')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'gigs', filter: `employer_id=eq.${user.id}` }, () => {
+        fetchMyGigs();
+      })
+      .subscribe();
+
+    return () => {
+      appChannel.unsubscribe();
+      gigChannel.unsubscribe();
+    };
   }, [user]);
 
   const fetchMyGigs = async () => {

@@ -62,6 +62,18 @@ export default function HiredWorkers() {
   useEffect(() => {
     if (user) {
       fetchHiredWorkers();
+
+      // Subscribe to real-time updates from hired_workers
+      const channel = supabase
+        .channel('public:hired_workers_employer')
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'hired_workers', filter: `employer_id=eq.${user.id}` }, () => {
+          fetchHiredWorkers();
+        })
+        .subscribe();
+
+      return () => {
+        channel.unsubscribe();
+      };
     }
   }, [user]);
 
@@ -81,59 +93,7 @@ export default function HiredWorkers() {
       if (data && data.length > 0) {
         setHiredWorkers(data as HiredWorker[]);
       } else {
-        // Create sample data for demo if no data exists
-        const sampleWorkers = [
-          {
-            employer_id: user.id,
-            worker_id: 'worker1',
-            worker_name: 'Ahmad Rosli',
-            worker_avatar: 'https://randomuser.me/api/portraits/men/32.jpg',
-            gig_title: 'Cafe Assistant',
-            amount: 72,
-            clock_in_time: new Date().toISOString(),
-            clock_out_time: null,
-            status: 'active',
-            payment_status: 'pending',
-            rating_given: false
-          },
-          {
-            employer_id: user.id,
-            worker_id: 'worker2',
-            worker_name: 'Nurul Hidayah',
-            worker_avatar: 'https://randomuser.me/api/portraits/women/44.jpg',
-            gig_title: 'Event Crew',
-            amount: 120,
-            clock_in_time: new Date(Date.now() - 8 * 60 * 60 * 1000).toISOString(),
-            clock_out_time: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
-            status: 'completed',
-            payment_status: 'pending',
-            rating_given: false
-          },
-          {
-            employer_id: user.id,
-            worker_id: 'worker3',
-            worker_name: 'Jason Tan',
-            worker_avatar: 'https://randomuser.me/api/portraits/men/67.jpg',
-            gig_title: 'Warehouse Assistant',
-            amount: 88,
-            clock_in_time: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
-            clock_out_time: new Date(Date.now() - 16 * 60 * 60 * 1000).toISOString(),
-            status: 'verified',
-            payment_status: 'pending',
-            rating_given: true
-          }
-        ];
-
-        for (const worker of sampleWorkers) {
-          await supabase.from('hired_workers').insert([worker]);
-        }
-        
-        const { data: newData } = await supabase
-          .from('hired_workers')
-          .select('*')
-          .eq('employer_id', user.id);
-        
-        setHiredWorkers((newData || []) as HiredWorker[]);
+        setHiredWorkers([]);
       }
     } catch (err) {
       console.error('Error fetching hired workers:', err);

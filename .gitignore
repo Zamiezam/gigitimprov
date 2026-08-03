@@ -29,3 +29,5 @@ Thumbs.db
 # Misc
 coverage/
 *.log
+.vercel
+.env*

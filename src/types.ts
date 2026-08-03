@@ -34,6 +34,8 @@ export interface Applicant {
   distance: string;
   bio: string;
   status: 'Pending' | 'Hired' | 'Messaged';
+  worker_id?: string;
+  gig_id?: string;
 }
 
 export interface BackupWorker {

@@ -193,14 +193,11 @@ export default function EmployerDashboardView({ onNavigate, gigs, onAddGig, onLo
   useEffect(() => {
     // Subscribe to real-time gig changes
     const channel = supabase
-      .channel('gig_changes')
-      .on('postgres_changes', 
-        { event: '*', schema: 'public', table: 'gigs', filter: `employer_id=eq.${user?.id}` },
-        () => {
-          fetchMyGigs();
-          fetchAllApplicants();
-        }
-      )
+      .channel('public:applicants')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'applicants' }, payload => {
+        // fetchApplicants again
+        fetchAllApplicants();
+      })
       .subscribe();
     
     return () => {
@@ -239,6 +236,8 @@ export default function EmployerDashboardView({ onNavigate, gigs, onAddGig, onLo
       if (!error && data && data.length > 0) {
         const mappedApplicants: Applicant[] = data.map((app: any) => ({
           id: app.id,
+          worker_id: app.worker_id,
+          gig_id: app.gig_id,
           name: app.profiles?.full_name || 'Student Applicant',
           avatar: app.profiles?.avatar_url || `https://randomuser.me/api/portraits/${Math.random() > 0.5 ? 'women' : 'men'}/${Math.floor(Math.random() * 100)}.jpg`,
           rating: 4 + Math.random(),
@@ -250,57 +249,11 @@ export default function EmployerDashboardView({ onNavigate, gigs, onAddGig, onLo
         }));
         setApplicants(mappedApplicants);
       } else {
-        setApplicants([
-          {
-            id: 'demo-1',
-            name: 'Ahmad Rosli',
-            avatar: 'https://randomuser.me/api/portraits/men/32.jpg',
-            rating: 4.9,
-            badge: 'Verified Student',
-            noShowRate: '0%',
-            distance: '1.2km away',
-            bio: 'UMS Computer Science student. Experienced barista with 6 months cafe experience.',
-            status: 'Pending'
-          },
-          {
-            id: 'demo-2',
-            name: 'Nurul Hidayah',
-            avatar: 'https://randomuser.me/api/portraits/women/44.jpg',
-            rating: 5.0,
-            badge: 'High-Tier Pro',
-            noShowRate: '0%',
-            distance: '0.8km away',
-            bio: 'Part-time student at UMS. 12 successful gigs completed.',
-            status: 'Pending'
-          },
-          {
-            id: 'demo-3',
-            name: 'Jason Tan',
-            avatar: 'https://randomuser.me/api/portraits/men/67.jpg',
-            rating: 4.7,
-            badge: 'Verified Student',
-            noShowRate: '5%',
-            distance: '2.3km away',
-            bio: 'Logistics student. Previous warehouse experience.',
-            status: 'Pending'
-          }
-        ]);
+        setApplicants([]);
       }
     } catch (err) {
       console.error('Error fetching applicants:', err);
-      setApplicants([
-        {
-          id: 'demo-1',
-          name: 'Ahmad Rosli',
-          avatar: 'https://randomuser.me/api/portraits/men/32.jpg',
-          rating: 4.9,
-          badge: 'Verified Student',
-          noShowRate: '0%',
-          distance: '1.2km away',
-          bio: 'UMS Computer Science student.',
-          status: 'Pending'
-        }
-      ]);
+      setApplicants([]);
     } finally {
       setLoading(false);
     }
@@ -355,46 +308,83 @@ export default function EmployerDashboardView({ onNavigate, gigs, onAddGig, onLo
 
   // Handle hiring
   const handleHire = async (applicant: Applicant) => {
-    setShowSuccessToast(`🎉 Hired ${applicant.name}! They will be notified.`);
-    setTimeout(() => setShowSuccessToast(null), 3000);
-    setApplicants(prev => prev.map(a => 
-      a.id === applicant.id ? { ...a, status: 'Hired' } : a
-    ));
+    if (!user) return;
+    try {
+      // Find the corresponding gig to get title
+      const gigId = applicant.gig_id || selectedGigId;
+      const gig = myGigs.find(g => g.id === gigId) || { title: 'Gig', rate: '15', duration: '5 Hours' };
+      
+      const durationStr = String(gig.duration || '6');
+      const rateStr = String(gig.rate || '12');
+      const durationHours = parseInt(durationStr.replace(/[^0-9]/g, '')) || 6;
+      const rateNum = parseInt(rateStr.replace(/[^0-9]/g, '')) || 12;
+      const totalAmount = rateNum * durationHours;
+
+      // Update applicant status
+      await api.updateApplicantStatus(applicant.id, 'Hired');
+      
+      if (applicant.worker_id) {
+        // Create hired_workers record
+        await supabase.from('hired_workers').insert({
+          worker_id: applicant.worker_id,
+          worker_name: applicant.name,
+          worker_avatar: applicant.avatar,
+          employer_id: user.id,
+          employer_name: user.email?.split('@')[0] || 'Employer',
+          gig_title: gig.title,
+          gig_id: gigId,
+          amount: totalAmount,
+          status: 'active',
+          payment_status: 'pending'
+        });
+      }
+
+      setShowSuccessToast(`🎉 Hired ${applicant.name}! They will be notified.`);
+      setTimeout(() => setShowSuccessToast(null), 3000);
+      setApplicants(prev => prev.map(a => 
+        a.id === applicant.id ? { ...a, status: 'Hired' } : a
+      ));
+    } catch (err) {
+      console.error('Error hiring:', err);
+      setShowSuccessToast(`❌ Failed to hire ${applicant.name}`);
+      setTimeout(() => setShowSuccessToast(null), 3000);
+    }
   };
 
   // Handle chat
-  const handleOpenChat = (applicant: Applicant) => {
+  const handleOpenChat = async (applicant: Applicant) => {
     setSelectedApplicant(applicant);
-    setChatMessages([
-      {
-        sender: 'candidate',
-        text: `Hi! I'm interested in the position. I have ${applicant.rating} star rating. When can we discuss further?`,
-        time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+    setChatMessages([]);
+    if (user && applicant.worker_id) {
+      try {
+        const msgs = await api.getMessages(user.id, applicant.worker_id);
+        setChatMessages(msgs.map(m => ({
+          sender: m.sender_id === user.id ? 'employer' : 'candidate',
+          text: m.content,
+          time: new Date(m.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+        })));
+      } catch (err) {
+        console.error('Error fetching messages:', err);
       }
-    ]);
+    }
   };
 
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newMessageText.trim() || !selectedApplicant) return;
+    if (!newMessageText.trim() || !selectedApplicant || !user || !selectedApplicant.worker_id) return;
     
+    const msgText = newMessageText;
     const timeNow = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    setChatMessages(prev => [...prev, { sender: 'employer', text: newMessageText, time: timeNow }]);
+    
+    // Optimistic UI update
+    setChatMessages(prev => [...prev, { sender: 'employer', text: msgText, time: timeNow }]);
     setNewMessageText('');
     
-    setTimeout(() => {
-      const responses = [
-        "Thanks for your message! I'm available for an interview tomorrow.",
-        "Great! I can start as early as this weekend.",
-        "I understand. Let me know the next steps!",
-        "Perfect! I'll be there on time."
-      ];
-      setChatMessages(prev => [...prev, {
-        sender: 'candidate',
-        text: responses[Math.floor(Math.random() * responses.length)],
-        time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-      }]);
-    }, 1500);
+    try {
+      await api.sendMessage(user.id, selectedApplicant.worker_id, msgText);
+    } catch (err) {
+      console.error('Failed to send message:', err);
+    }
   };
 
   // Post new gig
