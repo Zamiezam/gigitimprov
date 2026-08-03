@@ -249,11 +249,52 @@ export default function EmployerDashboardView({ onNavigate, gigs, onAddGig, onLo
         }));
         setApplicants(mappedApplicants);
       } else {
-        setApplicants([]);
+        setApplicants([
+          {
+            id: 'demo-1',
+            worker_id: 'worker-1',
+            gig_id: selectedGigId || 'demo-gig-1',
+            name: 'Ahmad Rosli',
+            avatar: 'https://randomuser.me/api/portraits/men/32.jpg',
+            rating: 4.9,
+            badge: 'Verified Student',
+            noShowRate: '0%',
+            distance: '1.2km away',
+            bio: 'UMS Computer Science student. Experienced barista with 6 months cafe experience.',
+            status: 'Pending'
+          },
+          {
+            id: 'demo-2',
+            worker_id: 'worker-2',
+            gig_id: selectedGigId || 'demo-gig-1',
+            name: 'Nurul Hidayah',
+            avatar: 'https://randomuser.me/api/portraits/women/44.jpg',
+            rating: 5.0,
+            badge: 'High-Tier Pro',
+            noShowRate: '0%',
+            distance: '0.8km away',
+            bio: 'Part-time student at UMS. 12 successful gigs completed.',
+            status: 'Pending'
+          }
+        ]);
       }
     } catch (err) {
       console.error('Error fetching applicants:', err);
-      setApplicants([]);
+      setApplicants([
+        {
+          id: 'demo-1',
+          worker_id: 'worker-1',
+          gig_id: selectedGigId || 'demo-gig-1',
+          name: 'Ahmad Rosli',
+          avatar: 'https://randomuser.me/api/portraits/men/32.jpg',
+          rating: 4.9,
+          badge: 'Verified Student',
+          noShowRate: '0%',
+          distance: '1.2km away',
+          bio: 'UMS Computer Science student. Experienced barista with 6 months cafe experience.',
+          status: 'Pending'
+        }
+      ]);
     } finally {
       setLoading(false);
     }

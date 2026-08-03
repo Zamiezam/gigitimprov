@@ -70,8 +70,26 @@ export default function EmployerMyGigs({ onNavigate, onPostNewGig }: EmployerMyG
         .order('created_at', { ascending: false });
       
       if (!error && data) {
-        setMyGigs(data);
-        await fetchApplicantsCounts(data);
+        if (data.length > 0) {
+          setMyGigs(data);
+          await fetchApplicantsCounts(data);
+        } else {
+          setMyGigs([
+            {
+              id: 'mock-gig-employer',
+              title: 'Event Helper',
+              employer: 'Sabah Convention Centre',
+              locationName: 'Kota Kinabalu',
+              rate: 'RM 12/hr',
+              duration: '8 Hours',
+              category: 'Event',
+              employer_id: user?.id,
+              status: 'Open',
+              created_at: new Date().toISOString(),
+              distance: '1.2km'
+            } as any
+          ]);
+        }
       }
     } catch (err) {
       console.error('Error fetching gigs:', err);

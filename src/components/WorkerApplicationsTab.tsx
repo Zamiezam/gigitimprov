@@ -113,8 +113,42 @@ export default function WorkerApplicationsTab() {
         };
       });
 
-      setApplications(mappedApps);
-      setHiredShifts(shiftsData || []);
+      const finalApps = mappedApps.length > 0 ? mappedApps : [
+        {
+          id: 'mock-app-1',
+          gig_id: 'mock-gig-1',
+          worker_id: user.id,
+          status: 'Pending',
+          created_at: new Date().toISOString(),
+          gig: {
+            id: 'mock-gig-1',
+            title: 'Event Helper',
+            employer: 'Sabah Convention Centre',
+            locationName: 'Kota Kinabalu',
+            rate: 'RM 12/hr',
+            duration: '8 Hours'
+          }
+        }
+      ];
+
+      const finalShifts = (shiftsData && shiftsData.length > 0) ? shiftsData : [
+        {
+          id: 'mock-shift-1',
+          gig_id: 'mock-gig-2',
+          gig_title: 'Cafe Barista',
+          employer_id: 'mock-emp',
+          employer_name: 'Damai Bistro',
+          worker_id: user.id,
+          worker_name: 'Student',
+          amount: 60,
+          status: 'active',
+          payment_status: 'pending',
+          created_at: new Date().toISOString()
+        }
+      ];
+
+      setApplications(finalApps as any);
+      setHiredShifts(finalShifts as any);
     } catch (err) {
       console.error('Error fetching applications data:', err);
     } finally {
