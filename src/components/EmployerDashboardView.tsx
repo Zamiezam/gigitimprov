@@ -95,7 +95,7 @@ export default function EmployerDashboardView({ onNavigate, gigs, onAddGig, onLo
   // State
   const [selectedWorkerProfile, setSelectedWorkerProfile] = useState<any>(null);
   const [showWorkerProfile, setShowWorkerProfile] = useState(false);
-  const [currentSubView, setCurrentSubView] = useState<'dashboard' | 'mygigs' | 'hired' | 'settings' | 'wallet'>('dashboard'); 
+  const [currentSubView, setCurrentSubView] = useState<'dashboard' | 'mygigs' | 'hired' | 'settings' | 'wallet' | 'esg'>('dashboard'); 
   const [selectedGigForBackup, setSelectedGigForBackup] = useState<Gig | null>(null);
   const [showBackupPool, setShowBackupPool] = useState(false);
   const [applicants, setApplicants] = useState<Applicant[]>([]);
@@ -502,8 +502,8 @@ export default function EmployerDashboardView({ onNavigate, gigs, onAddGig, onLo
         </div>
         <div className="hidden lg:flex items-center gap-6">
           <button onClick={() => onNavigate(AppView.Landing)} className="text-on-surface-variant hover:text-primary transition-colors text-sm font-semibold">Home</button>
-          <button onClick={() => onNavigate(AppView.WorkerBrowse)} className="text-on-surface-variant hover:text-primary transition-colors text-sm font-semibold">Find Gigs</button>
-          <button onClick={() => onNavigate(AppView.EmployerDashboard)} className="text-primary font-bold border-b-2 border-primary py-1 text-sm">Hire Staff</button>
+          <button onClick={() => onNavigate(AppView.WorkerBrowse)} className="text-on-surface-variant hover:text-primary transition-colors text-sm font-semibold">Find Opportunities</button>
+          <button onClick={() => onNavigate(AppView.EmployerDashboard)} className="text-primary font-bold border-b-2 border-primary py-1 text-sm">Hire Trusted Talent</button>
         </div>
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-2 px-3 py-1.5 bg-primary/10 rounded-full">
@@ -581,6 +581,17 @@ export default function EmployerDashboardView({ onNavigate, gigs, onAddGig, onLo
               <CreditCard size={18} />
               <span className="text-sm">Wallet</span>
             </button>
+            <button 
+              onClick={() => setCurrentSubView('esg')} 
+              className={`w-full flex items-center gap-3 p-3 rounded-xl transition-all ${
+                currentSubView === 'esg' 
+                  ? 'bg-green-100 text-green-800 font-bold' 
+                  : 'text-on-surface-variant hover:bg-surface-container-low'
+              }`}
+            >
+              <Award size={18} />
+              <span className="text-sm">ESG Impact</span>
+            </button>
           </nav>
 
           <div className="px-4 space-y-1 border-t border-outline-variant pt-4">
@@ -594,6 +605,118 @@ export default function EmployerDashboardView({ onNavigate, gigs, onAddGig, onLo
 
         {/* Main Area */}
         <main className="flex-1 ml-0 md:ml-64 p-4 md:p-8 min-h-screen pb-24">
+          {currentSubView === 'esg' && (
+            <div className="max-w-6xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+              <div className="flex justify-between items-center bg-white p-6 rounded-3xl border border-outline-variant shadow-sm relative overflow-hidden">
+                <div className="absolute top-0 right-0 w-64 h-64 bg-green-500/10 rounded-full blur-3xl -mr-20 -mt-20"></div>
+                <div className="relative z-10">
+                  <h1 className="font-display font-bold text-3xl text-primary flex items-center gap-3">
+                    <Award size={32} className="text-green-600" />
+                    Corporate ESG Impact
+                  </h1>
+                  <p className="text-sm text-on-surface-variant mt-2 max-w-xl leading-relaxed">
+                    Track your company's social impact through the Job on Campus ecosystem. These metrics can be exported for your annual ESG and sustainability reports.
+                  </p>
+                </div>
+                <div className="hidden md:block relative z-10">
+                  <button className="bg-primary text-white px-6 py-3 rounded-xl font-bold hover:bg-primary/90 transition-all shadow-md active:scale-95 flex items-center gap-2">
+                    <FileText size={18} /> Export ESG Report
+                  </button>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div className="bg-white p-5 rounded-2xl border border-outline-variant shadow-xs">
+                  <div className="w-10 h-10 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center mb-4">
+                    <Users size={20} />
+                  </div>
+                  <h3 className="text-3xl font-black text-on-surface mb-1">120</h3>
+                  <p className="text-xs font-bold text-on-surface-variant uppercase tracking-wider">Students Hired</p>
+                  <p className="text-[10px] text-green-600 font-bold mt-2">↑ +15% this quarter</p>
+                </div>
+                
+                <div className="bg-white p-5 rounded-2xl border border-outline-variant shadow-xs">
+                  <div className="w-10 h-10 rounded-full bg-amber-50 text-amber-600 flex items-center justify-center mb-4">
+                    <CreditCard size={20} />
+                  </div>
+                  <h3 className="text-3xl font-black text-on-surface mb-1">RM34,000</h3>
+                  <p className="text-xs font-bold text-on-surface-variant uppercase tracking-wider">Total Wages Paid</p>
+                  <p className="text-[10px] text-green-600 font-bold mt-2">100% via GigIT Wallet</p>
+                </div>
+
+                <div className="bg-white p-5 rounded-2xl border border-outline-variant shadow-xs">
+                  <div className="w-10 h-10 rounded-full bg-purple-50 text-purple-600 flex items-center justify-center mb-4">
+                    <Sparkles size={20} />
+                  </div>
+                  <h3 className="text-3xl font-black text-on-surface mb-1">52</h3>
+                  <p className="text-xs font-bold text-on-surface-variant uppercase tracking-wider">First-Time Workers</p>
+                  <p className="text-[10px] text-on-surface-variant font-medium mt-2">Empowering youth</p>
+                </div>
+
+                <div className="bg-white p-5 rounded-2xl border border-outline-variant shadow-xs">
+                  <div className="w-10 h-10 rounded-full bg-green-50 text-green-600 flex items-center justify-center mb-4">
+                    <Shield size={20} />
+                  </div>
+                  <h3 className="text-3xl font-black text-on-surface mb-1">4.8</h3>
+                  <p className="text-xs font-bold text-on-surface-variant uppercase tracking-wider">Avg SWEAT™️ Score</p>
+                  <p className="text-[10px] text-green-600 font-bold mt-2">Top tier reliability</p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <div className="lg:col-span-2 bg-white rounded-3xl border border-outline-variant p-6 shadow-sm">
+                  <h3 className="font-bold text-lg text-on-surface mb-4">University Partnerships</h3>
+                  <div className="space-y-4">
+                    <div className="p-4 border border-outline-variant rounded-2xl flex items-center justify-between">
+                      <div className="flex items-center gap-4">
+                        <div className="w-12 h-12 bg-surface-container-low rounded-xl flex items-center justify-center font-black text-primary">
+                          UMS
+                        </div>
+                        <div>
+                          <p className="font-bold text-sm text-on-surface">Universiti Malaysia Sabah</p>
+                          <p className="text-xs text-on-surface-variant">CEDEC Partner Since 2024</p>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <p className="font-black text-lg text-primary">85</p>
+                        <p className="text-[10px] uppercase font-bold text-on-surface-variant tracking-wider">Students</p>
+                      </div>
+                    </div>
+                    <div className="p-4 border border-outline-variant rounded-2xl flex items-center justify-between">
+                      <div className="flex items-center gap-4">
+                        <div className="w-12 h-12 bg-surface-container-low rounded-xl flex items-center justify-center font-black text-primary">
+                          UiTM
+                        </div>
+                        <div>
+                          <p className="font-bold text-sm text-on-surface">Universiti Teknologi MARA</p>
+                          <p className="text-xs text-on-surface-variant">Verified Partner</p>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <p className="font-black text-lg text-primary">35</p>
+                        <p className="text-[10px] uppercase font-bold text-on-surface-variant tracking-wider">Students</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="bg-primary/5 rounded-3xl border border-primary/20 p-6 flex flex-col justify-between">
+                  <div>
+                    <h3 className="font-bold text-lg text-primary mb-2">Why ESG Matters?</h3>
+                    <p className="text-sm text-on-surface-variant leading-relaxed mb-4">
+                      By prioritizing students through the GigIT Job on Campus ecosystem, you are actively participating in national youth empowerment initiatives, reducing youth unemployment, and providing safe working environments.
+                    </p>
+                  </div>
+                  <div className="bg-white p-4 rounded-2xl border border-outline-variant text-center space-y-2">
+                    <Award size={32} className="mx-auto text-amber-500" />
+                    <p className="text-xs font-bold text-on-surface">Eligible for TalentCorp Grants</p>
+                    <p className="text-[10px] text-on-surface-variant">Your ESG contribution qualifies for SME tax deductions under the national student employment scheme.</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
           {currentSubView === 'dashboard' && (
             <div className="max-w-7xl mx-auto space-y-8">
               {/* Toast */}

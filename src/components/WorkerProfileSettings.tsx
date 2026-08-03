@@ -248,8 +248,8 @@ export default function WorkerProfileSettings() {
           {/* Header */}
           <div className="flex justify-between items-center border-b border-outline-variant pb-4">
             <div>
-              <h1 className="font-display font-bold text-xl md:text-2xl text-primary">My Worker Profile</h1>
-              <p className="text-xs text-on-surface-variant mt-0.5">Customize your personal bio, transport availability, and skills tags.</p>
+              <h1 className="font-display font-bold text-xl md:text-2xl text-primary flex items-center gap-2">Verified Skills Passport™️</h1>
+              <p className="text-xs text-on-surface-variant mt-0.5">Your living portfolio of verified skills, attendance, and SWEAT™️ Trust Score.</p>
             </div>
             {isVerified ? (
               <span className="flex items-center gap-1.5 px-3 py-1 bg-green-50 border border-green-200 text-green-700 rounded-full text-xs font-bold shadow-xs">
@@ -535,7 +535,7 @@ export default function WorkerProfileSettings() {
                       </button>
                     </div>
                     <div className="mt-3 pt-3 border-t border-outline-variant/40">
-                      <p className="text-[9px] text-on-surface-variant font-bold uppercase tracking-wider mb-2">Your JSS Score</p>
+                      <p className="text-[9px] text-on-surface-variant font-bold uppercase tracking-wider mb-2">Your SWEAT™️ Score</p>
                       <JSSBadge score={Math.round(parseFloat('4.8') * 20)} size="sm" showLabel={true} />
                     </div>
                   </div>

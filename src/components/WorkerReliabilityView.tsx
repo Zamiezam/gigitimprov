@@ -194,7 +194,7 @@ export default function WorkerReliabilityView({ onNavigate, isEmbedded = false }
 
       if (error) throw error;
       await loadProfileAndStats();
-      showToast(`⚠️ Simulated cancellation! Penalty applied. Reliability Score updated.`);
+      showToast(`⚠️ Simulated cancellation! Penalty applied. SWEAT™️ Trust Score updated.`);
     } catch (err) {
       console.error('Failed to simulate no-show:', err);
     }
@@ -232,8 +232,8 @@ export default function WorkerReliabilityView({ onNavigate, isEmbedded = false }
           </div>
 
           <div className="hidden lg:flex items-center gap-6">
-            <button onClick={() => onNavigate(AppView.WorkerBrowse)} className="text-on-surface-variant hover:text-primary transition-colors text-sm font-semibold tracking-wide cursor-pointer">Find Gigs</button>
-            <button onClick={() => onNavigate(AppView.WorkerReliability)} className="text-primary font-bold border-b-2 border-primary py-1 text-sm tracking-wide cursor-pointer">Reliability Portal</button>
+            <button onClick={() => onNavigate(AppView.WorkerBrowse)} className="text-on-surface-variant hover:text-primary transition-colors text-sm font-semibold tracking-wide cursor-pointer">Find Opportunities</button>
+            <button onClick={() => onNavigate(AppView.WorkerReliability)} className="text-primary font-bold border-b-2 border-primary py-1 text-sm tracking-wide cursor-pointer">Trust Dashboard</button>
           </div>
 
           <div className="flex items-center gap-4">
@@ -327,7 +327,7 @@ export default function WorkerReliabilityView({ onNavigate, isEmbedded = false }
           <div className="lg:col-span-8 bg-white border border-outline-variant p-6 md:p-8 rounded-3xl space-y-6 shadow-sm">
             <div className="flex justify-between items-center bg-surface-container-low/50 p-4 rounded-2xl">
               <div>
-                <h3 className="font-display font-semibold text-base text-on-surface">{workerName.split(' ')[0]}'s Reliability Score</h3>
+                <h3 className="font-display font-semibold text-base text-on-surface">{workerName.split(' ')[0]}'s SWEAT™️ Trust Score</h3>
                 <p className="text-xs text-on-surface-variant leading-relaxed">Calculated from student portal records, attendance rates, and local feedback.</p>
               </div>
               <div className="text-right">

@@ -410,10 +410,13 @@ export default function HiredWorkers() {
                   </div>
                   <div className="flex gap-2 flex-wrap">
                     {worker.status === 'active' && (
-                      <span className="px-3 py-1 bg-green-100 text-green-700 rounded-full text-xs font-semibold flex items-center gap-1">
-                        <div className="w-1.5 h-1.5 bg-green-500 rounded-full"></div>
-                        Active
-                      </span>
+                      <div className="flex flex-col items-end gap-1">
+                        <span className="px-3 py-1 bg-green-100 text-green-700 rounded-full text-xs font-semibold flex items-center gap-1">
+                          <div className="w-1.5 h-1.5 bg-green-500 rounded-full"></div>
+                          Active Shift
+                        </span>
+                        <span className="text-[9px] text-blue-600 font-bold uppercase tracking-wider flex items-center gap-0.5 border border-blue-200 bg-blue-50 px-1 rounded"><Shield size={8} /> PERKESO Pending</span>
+                      </div>
                     )}
                     {worker.status === 'completed' && !worker.rating_given && (
                       <button
@@ -424,12 +427,15 @@ export default function HiredWorkers() {
                       </button>
                     )}
                     {worker.status === 'verified' && worker.payment_status === 'pending' && (
-                      <button
-                        onClick={() => handlePayNow(worker)}  // Change this
-                        className="px-4 py-2 bg-purple-600 text-white rounded-lg text-sm font-semibold hover:bg-purple-700 transition-all flex items-center gap-1"
-                      >
-                        <Wallet size={14} /> Pay Now
-                      </button>
+                      <div className="flex flex-col items-end gap-1">
+                        <button
+                          onClick={() => handlePayNow(worker)}
+                          className="px-4 py-2 bg-purple-600 text-white rounded-lg text-sm font-semibold hover:bg-purple-700 transition-all flex items-center gap-1"
+                        >
+                          <Wallet size={14} /> Pay from Escrow
+                        </button>
+                        <span className="text-[9px] text-purple-600 font-bold uppercase tracking-wider flex items-center gap-0.5"><Shield size={8} /> Protected Payment</span>
+                      </div>
                     )}
                     {worker.payment_status === 'paid' && (
                       <span className="px-3 py-1 bg-green-100 text-green-700 rounded-full text-xs font-semibold flex items-center gap-1">

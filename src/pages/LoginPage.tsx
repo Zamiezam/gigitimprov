@@ -145,7 +145,7 @@ export default function LoginPage({ onClose, defaultRole = 'worker', onLoginSucc
                     }`}
                   >
                     <Users size={18} />
-                    <span className="text-sm font-semibold">Find Gigs</span>
+                    <span className="text-sm font-semibold">Find Opportunities</span>
                   </button>
                   <button
                     type="button"
@@ -157,7 +157,7 @@ export default function LoginPage({ onClose, defaultRole = 'worker', onLoginSucc
                     }`}
                   >
                     <Briefcase size={18} />
-                    <span className="text-sm font-semibold">Hire Staff</span>
+                    <span className="text-sm font-semibold">Hire Trusted Talent</span>
                   </button>
                 </div>
               </div>

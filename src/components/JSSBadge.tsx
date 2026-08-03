@@ -52,7 +52,7 @@ export default function JSSBadge({ score, size = 'md', showLabel = true }: JSSBa
       {showLabel && (
         <div>
           <p className="text-[10px] font-black" style={{ color }}>{label}</p>
-          <p className="text-[9px] text-on-surface-variant font-medium">JSS Score</p>
+          <p className="text-[9px] text-on-surface-variant font-medium">SWEAT™️ Score</p>
         </div>
       )}
     </div>

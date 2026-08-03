@@ -346,9 +346,9 @@ export default function WorkerBrowseView({
 
         <div className="hidden lg:flex items-center gap-6">
           <button onClick={() => onNavigate(AppView.Landing)} className="text-on-surface-variant hover:text-primary transition-colors text-sm font-semibold tracking-wide cursor-pointer">Kota / Home</button>
-          <button onClick={() => { setActiveTab('Dashboard'); onNavigate(AppView.WorkerBrowse); }} className="text-primary font-bold border-b-2 border-primary py-1 text-sm tracking-wide cursor-pointer">Find Gigs</button>
-          <button onClick={() => onNavigate(AppView.EmployerDashboard)} className="text-on-surface-variant hover:text-primary transition-colors text-sm font-semibold tracking-wide cursor-pointer">Hire Staff</button>
-          <button onClick={() => { setActiveTab('Reliability'); onNavigate(AppView.WorkerBrowse); }} className="text-on-surface-variant hover:text-primary transition-colors text-sm font-semibold tracking-wide cursor-pointer">Reliability Portal</button>
+          <button onClick={() => { setActiveTab('Dashboard'); onNavigate(AppView.WorkerBrowse); }} className="text-primary font-bold border-b-2 border-primary py-1 text-sm tracking-wide cursor-pointer">Find Opportunities</button>
+          <button onClick={() => onNavigate(AppView.EmployerDashboard)} className="text-on-surface-variant hover:text-primary transition-colors text-sm font-semibold tracking-wide cursor-pointer">Hire Trusted Talent</button>
+          <button onClick={() => { setActiveTab('Reliability'); onNavigate(AppView.WorkerBrowse); }} className="text-on-surface-variant hover:text-primary transition-colors text-sm font-semibold tracking-wide cursor-pointer">Trust Dashboard</button>
         </div>
 
         <div className="flex items-center gap-4">
@@ -395,7 +395,7 @@ export default function WorkerBrowseView({
 
             <div className="bg-secondary/5 p-4 rounded-xl border border-secondary/20">
               <div className="flex justify-between items-center mb-1.5">
-                <span className="text-[11px] text-secondary font-bold uppercase tracking-wider">Reliability Score</span>
+                <span className="text-[11px] text-secondary font-bold uppercase tracking-wider">SWEAT™️ Score</span>
                 <span className="text-sm font-bold text-secondary flex items-center gap-0.5">
                   <Award size={14} fill="currentColor" />4.8
                 </span>
@@ -422,9 +422,9 @@ export default function WorkerBrowseView({
             {[
               { id: 'Dashboard',      icon: 'dashboard',      label: 'Dashboard'      },
               { id: 'MyApplications', icon: 'list_alt',       label: 'My Gigs/Apps'   },
-              { id: 'SavedGigs',      icon: 'bookmarks',      label: `Saved (${savedGigIds.size})`  },
+              { id: 'SavedGigs',      icon: 'bookmarks',      label: `Saved Opportunities (${savedGigIds.size})`  },
               { id: 'Messages',       icon: 'chat',           label: 'Messages'       },
-              { id: 'Reliability',    icon: 'verified_user',  label: 'My Reliability' },
+              { id: 'Reliability',    icon: 'verified_user',  label: 'Trust Dashboard' },
               { id: 'Earnings',       icon: 'payments',       label: 'Earnings'       },
               { id: 'Profile',        icon: 'person',         label: 'My Profile'     },
               { id: 'Support',        icon: 'support_agent',  label: 'Support'        },
@@ -645,7 +645,12 @@ export default function WorkerBrowseView({
                                   </div>
                                   <h3 className="font-display font-bold text-lg text-on-surface mt-2 group-hover:text-primary transition-colors">{g.title}</h3>
                                   <div className="flex items-center gap-2 mt-1">
-                                    <p className="text-xs text-on-surface-variant font-medium">{g.employer}</p>
+                                    <p className="text-xs text-on-surface-variant font-medium flex items-center gap-1.5">
+                                      {g.employer}
+                                      <span className="flex items-center gap-0.5 bg-blue-50 text-blue-700 px-1.5 py-0.5 rounded text-[8px] font-bold uppercase tracking-wider border border-blue-200">
+                                        <Shield size={10} /> CEDEC Partner
+                                      </span>
+                                    </p>
                                     <button 
                                       onClick={(e) => { e.stopPropagation(); setShowInsightsForEmployer(g.employer); }}
                                       className="text-[10px] bg-primary/10 text-primary font-bold px-2 py-0.5 rounded-full hover:bg-primary/20 transition-colors cursor-pointer flex items-center gap-1"
@@ -710,7 +715,12 @@ export default function WorkerBrowseView({
 
                             <h3 className="font-semibold text-on-surface text-sm mt-4">{g.title}</h3>
                             <div className="flex justify-between items-center mt-1">
-                              <p className="text-[11px] font-medium text-on-surface-variant">{g.employer}</p>
+                              <p className="text-[11px] font-medium text-on-surface-variant flex items-center gap-1.5">
+                                {g.employer}
+                                <span className="flex items-center gap-0.5 bg-blue-50 text-blue-700 px-1 py-0.5 rounded text-[7px] font-bold uppercase tracking-wider border border-blue-200">
+                                  <Shield size={8} /> CEDEC
+                                </span>
+                              </p>
                               <button 
                                 onClick={(e) => { e.stopPropagation(); setShowInsightsForEmployer(g.employer); }}
                                 className="text-[9px] bg-primary/10 text-primary font-bold px-1.5 py-0.5 rounded-full hover:bg-primary/20 transition-colors cursor-pointer flex items-center gap-0.5"
@@ -770,16 +780,16 @@ export default function WorkerBrowseView({
             <div className="max-w-5xl mx-auto px-4 md:px-8 mt-4">
               <div className="border-b border-outline-variant pb-4 mb-6">
                 <h1 className="font-display font-bold text-xl md:text-2xl text-primary flex items-center gap-2">
-                  <BookmarkCheck size={22} /> Saved Gigs
+                  <BookmarkCheck size={22} /> Saved Opportunities
                 </h1>
-                <p className="text-xs text-on-surface-variant mt-1 font-medium">Gigs you've bookmarked for later. {savedGigIds.size} saved.</p>
+                <p className="text-xs text-on-surface-variant mt-1 font-medium">Opportunities you've bookmarked for later. {savedGigIds.size} saved.</p>
               </div>
               {savedGigIds.size === 0 ? (
                 <div className="text-center py-16 bg-surface-container-lowest border border-outline-variant rounded-2xl border-dashed">
                   <Bookmark size={40} className="mx-auto text-on-surface-variant mb-3" />
-                  <p className="text-sm font-bold text-on-surface">No saved gigs yet</p>
+                  <p className="text-sm font-bold text-on-surface">No saved opportunities yet</p>
                   <p className="text-xs text-on-surface-variant mt-1">Click the bookmark icon on any gig to save it here.</p>
-                  <button onClick={() => setActiveTab('Dashboard')} className="mt-4 bg-primary text-white text-xs font-bold px-5 py-2.5 rounded-xl hover:bg-primary/90 transition-colors cursor-pointer">Browse Gigs</button>
+                  <button onClick={() => setActiveTab('Dashboard')} className="mt-4 bg-primary text-white text-xs font-bold px-5 py-2.5 rounded-xl hover:bg-primary/90 transition-colors cursor-pointer">Find Opportunities</button>
                 </div>
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -1022,7 +1032,12 @@ export default function WorkerBrowseView({
                 <div>
                   <h2 className="font-bold text-xl text-on-surface leading-tight">{selectedGig.title}</h2>
                   <div className="flex items-center gap-2 mt-0.5">
-                    <p className="text-sm text-on-surface-variant font-medium">{selectedGig.employer}</p>
+                    <p className="text-sm text-on-surface-variant font-medium flex items-center gap-2">
+                      {selectedGig.employer}
+                      <span className="flex items-center gap-0.5 bg-blue-50 text-blue-700 px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider border border-blue-200">
+                        <Shield size={10} /> Verified CEDEC Partner
+                      </span>
+                    </p>
                     <button 
                       onClick={(e) => { e.stopPropagation(); setShowInsightsForEmployer(selectedGig.employer); }}
                       className="text-[10px] bg-primary/10 text-primary font-bold px-2 py-0.5 rounded-full hover:bg-primary/20 transition-colors cursor-pointer flex items-center gap-1"
@@ -1134,7 +1149,7 @@ export default function WorkerBrowseView({
           <div className={`p-1 px-4 rounded-full ${activeTab === 'Reliability' ? 'bg-primary/10' : ''}`}>
             <span className="material-symbols-outlined text-md">verified_user</span>
           </div>
-          <span className="text-[10px] font-semibold mt-1">Reliability</span>
+          <span className="text-[10px] font-semibold mt-1">Trust</span>
         </button>
       </div>
 

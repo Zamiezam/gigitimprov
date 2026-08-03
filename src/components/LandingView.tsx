@@ -91,8 +91,8 @@ export default function LandingView({ onNavigate, onOpenSelector }: LandingViewP
         </div>
         <div className="hidden md:flex items-center gap-6">
           <button onClick={() => onNavigate(AppView.Landing)} className="text-primary font-bold border-b-2 border-primary py-1 text-sm tracking-wide">Home</button>
-          <button onClick={() => onNavigate(AppView.WorkerBrowse)} className="text-on-surface-variant hover:text-primary transition-colors text-sm tracking-wide">Browse Gigs</button>
-          <button onClick={() => onNavigate(AppView.EmployerDashboard)} className="text-on-surface-variant hover:text-primary transition-colors text-sm tracking-wide">Hire Staff</button>
+          <button onClick={() => onNavigate(AppView.WorkerBrowse)} className="text-on-surface-variant hover:text-primary transition-colors text-sm tracking-wide">Campus Opportunities</button>
+          <button onClick={() => onNavigate(AppView.EmployerDashboard)} className="text-on-surface-variant hover:text-primary transition-colors text-sm tracking-wide">Hire Trusted Talent</button>
           <button onClick={() => onNavigate(AppView.WorkerReliability)} className="text-on-surface-variant hover:text-primary transition-colors text-sm tracking-wide">Worker Portal</button>
         </div>
         <div className="flex items-center gap-3">
@@ -120,21 +120,21 @@ export default function LandingView({ onNavigate, onOpenSelector }: LandingViewP
                 <span className="text-primary">Gig Network</span>
               </h1>
               <p className="text-base sm:text-lg text-on-surface-variant max-w-xl leading-relaxed">
-                Empowering UMS and UiTM students with high-quality gigs while providing local SMEs with a verified, reliable backup staff pool.
+                Empowering UMS, UiTM, and Politeknik students with high-quality opportunities while providing local SMEs with a verified, reliable backup staff pool.
               </p>
               <div className="flex flex-col sm:flex-row gap-4 pt-4">
                 <button 
                   onClick={() => onNavigate(AppView.WorkerBrowse)}
                   className="flex items-center justify-center gap-2 px-8 py-3.5 bg-primary text-white rounded-xl font-bold hover:bg-primary/90 shadow-md hover:shadow-lg transition-all group active:scale-95 cursor-pointer"
                 >
-                  <span>Find Gigs</span>
+                  <span>Find Opportunities</span>
                   <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
                 </button>
                 <button 
                   onClick={() => onNavigate(AppView.EmployerDashboard)}
                   className="flex items-center justify-center gap-2 px-8 py-3.5 border-2 border-primary text-primary bg-white/40 backdrop-blur-xs rounded-xl font-bold hover:bg-primary/5 transition-all active:scale-95 cursor-pointer"
                 >
-                  <span>Hire Reliable Staff</span>
+                  <span>Hire Trusted Talent</span>
                 </button>
               </div>
               <div className="flex items-center gap-4 pt-6">

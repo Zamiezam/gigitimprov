@@ -56,24 +56,29 @@ export default function EmployerInsightsModal({ employerName, onClose }: Employe
             </div>
           ) : (
             <>
-              {/* Scorecard */}
-              <div className="grid grid-cols-3 gap-3 mb-8">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-8">
                 <div className="bg-surface border border-outline-variant rounded-2xl p-4 text-center shadow-sm">
                   <Star size={20} fill="#f59e0b" className="text-amber-500 mx-auto mb-2" />
-                  <p className="text-xs text-on-surface-variant font-medium">Overall</p>
+                  <p className="text-xs text-on-surface-variant font-medium">Overall Rating</p>
                   <p className="text-xl font-bold font-display text-on-surface mt-1">{avgRating}</p>
                 </div>
                 <div className="bg-surface border border-outline-variant rounded-2xl p-4 text-center shadow-sm">
-                  <CreditCard size={20} className="text-teal-600 mx-auto mb-2" />
-                  <p className="text-xs text-on-surface-variant font-medium">Payment</p>
-                  <p className="text-xl font-bold font-display text-on-surface mt-1">{avgPayment}</p>
+                  <User size={20} className="text-blue-500 mx-auto mb-2" />
+                  <p className="text-xs text-on-surface-variant font-medium">Repeat Hires</p>
+                  <p className="text-xl font-bold font-display text-on-surface mt-1">74%</p>
                 </div>
                 <div className="bg-surface border border-outline-variant rounded-2xl p-4 text-center shadow-sm">
-                  <Shield size={20} className="text-indigo-600 mx-auto mb-2" />
-                  <p className="text-xs text-on-surface-variant font-medium">Safety</p>
-                  <p className="text-xl font-bold font-display text-on-surface mt-1">{avgSafety}</p>
+                  <Shield size={20} className="text-green-600 mx-auto mb-2" />
+                  <p className="text-xs text-on-surface-variant font-medium">Response Time</p>
+                  <p className="text-xl font-bold font-display text-on-surface mt-1"><span className="text-sm">{"< "}1hr</span></p>
+                </div>
+                <div className="bg-surface border border-outline-variant rounded-2xl p-4 text-center shadow-sm">
+                  <CreditCard size={20} className="text-teal-600 mx-auto mb-2" />
+                  <p className="text-xs text-on-surface-variant font-medium">Payment Reliability</p>
+                  <p className="text-xl font-bold font-display text-on-surface mt-1">100%</p>
                 </div>
               </div>
+
 
               {/* Reviews List */}
               <h3 className="text-sm font-bold text-on-surface mb-4 flex items-center gap-2">

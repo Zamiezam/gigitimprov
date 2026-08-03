@@ -304,7 +304,7 @@ export default function WorkerApplicationsTab() {
                 <Search size={36} className="mx-auto text-on-surface-variant mb-2" />
                 <p className="text-xs font-bold text-on-surface">No Pending Applications</p>
                 <p className="text-[10px] text-on-surface-variant mt-1 leading-normal">
-                  All your submitted applications are cleared. Go to Browse Gigs to apply for new opportunities!
+                  All your submitted applications are cleared. Go to Find Opportunities to apply for new opportunities!
                 </p>
               </div>
             ) : (
