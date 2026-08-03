@@ -32,6 +32,7 @@ import {
   MessageSquare,
   BookmarkCheck,
   Star,
+  Shield,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import WorkerReliabilityView from './WorkerReliabilityView';

@@ -17,7 +17,7 @@ import {
   Briefcase, Users, CreditCard, Settings, LogOut, X, Send, 
   Sparkles, Info, Loader2, Bot, ThumbsUp, Clock as ClockIcon,
   Filter, Search, ArrowUpDown, Coffee, Package, Calendar, 
-  Home, ShoppingBag, Zap, Copy, ChevronDown
+  Home, ShoppingBag, Zap, Copy, ChevronDown, Award, FileText
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { GoogleGenAI } from '@google/genai';

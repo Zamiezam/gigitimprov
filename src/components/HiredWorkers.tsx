@@ -6,7 +6,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { 
   Users, Clock, CheckCircle, Star, Send, X, Calendar, 
   MapPin, Award, ThumbsUp, MessageCircle, Filter, Search,
-  DollarSign, CreditCard, Wallet, Check, AlertCircle, RefreshCw, Gift
+  DollarSign, CreditCard, Wallet, Check, AlertCircle, RefreshCw, Gift, Shield
 } from 'lucide-react';
 import { usePayment } from '../context/PaymentContext';
 
