@@ -356,7 +356,7 @@ export default function WorkerBrowseView({
   // ── JSS Score from reliability score ────────────────────────
   const jssScore = Math.round(parseFloat(profile?.reliability_score || '4.8') * 20);
 
-  const workerName = profile?.full_name || user?.email?.split('@')[0] || 'Ahmad Rosli';
+  const workerName = profile?.full_name || user?.email?.split('@')[0] || 'Worker';
   const workerAvatar = profile?.avatar_url || 'https://randomuser.me/api/portraits/men/32.jpg';
 
   return (
@@ -673,7 +673,7 @@ export default function WorkerBrowseView({
                                     <p className="text-xs text-on-surface-variant font-medium flex items-center gap-1.5">
                                       {g.employer}
                                       <span className="flex items-center gap-0.5 bg-blue-50 text-blue-700 px-1.5 py-0.5 rounded text-[8px] font-bold uppercase tracking-wider border border-blue-200">
-                                        <Shield size={10} /> CEDEC Partner
+                                        <Shield size={10} /> Verified Partner
                                       </span>
                                     </p>
                                     <button 
@@ -743,7 +743,7 @@ export default function WorkerBrowseView({
                               <p className="text-[11px] font-medium text-on-surface-variant flex items-center gap-1.5">
                                 {g.employer}
                                 <span className="flex items-center gap-0.5 bg-blue-50 text-blue-700 px-1 py-0.5 rounded text-[7px] font-bold uppercase tracking-wider border border-blue-200">
-                                  <Shield size={8} /> CEDEC
+                                  <Shield size={8} /> Verified
                                 </span>
                               </p>
                               <button 
@@ -1060,7 +1060,7 @@ export default function WorkerBrowseView({
                     <p className="text-sm text-on-surface-variant font-medium flex items-center gap-2">
                       {selectedGig.employer}
                       <span className="flex items-center gap-0.5 bg-blue-50 text-blue-700 px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider border border-blue-200">
-                        <Shield size={10} /> Verified CEDEC Partner
+                        <Shield size={10} /> Verified Partner
                       </span>
                     </p>
                     <button 

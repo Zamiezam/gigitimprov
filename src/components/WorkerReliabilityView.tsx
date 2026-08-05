@@ -216,9 +216,9 @@ export default function WorkerReliabilityView({ onNavigate, isEmbedded = false }
     );
   }
 
-  const workerName = profile?.full_name || user?.email?.split('@')[0] || 'Ahmad Rosli';
+  const workerName = profile?.full_name || user?.email?.split('@')[0] || 'Worker';
   const workerAvatar = profile?.avatar_url || 'https://randomuser.me/api/portraits/men/32.jpg';
-  const workerUniversity = profile?.university || 'Universiti Malaysia Sabah (UMS)';
+  const workerUniversity = profile?.university || 'University Student';
 
   return (
     <div className={isEmbedded ? "bg-transparent text-on-surface font-sans" : "bg-background min-h-screen text-on-surface font-sans selection:bg-primary-container selection:text-on-primary-container"}>

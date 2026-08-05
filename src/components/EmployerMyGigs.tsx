@@ -180,10 +180,7 @@ export default function EmployerMyGigs({ onNavigate, onPostNewGig }: EmployerMyG
     if (!error && data) {
       setGigApplicants(data);
     } else {
-      setGigApplicants([
-        { id: '1', worker_name: 'Ahmad Rosli', worker_rating: 4.9, status: 'pending', applied_at: new Date().toISOString() },
-        { id: '2', worker_name: 'Nurul Hidayah', worker_rating: 5.0, status: 'pending', applied_at: new Date().toISOString() }
-      ]);
+      setGigApplicants([]);
     }
   };
 

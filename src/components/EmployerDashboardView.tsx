@@ -249,52 +249,11 @@ export default function EmployerDashboardView({ onNavigate, gigs, onAddGig, onLo
         }));
         setApplicants(mappedApplicants);
       } else {
-        setApplicants([
-          {
-            id: 'demo-1',
-            worker_id: 'worker-1',
-            gig_id: selectedGigId || 'demo-gig-1',
-            name: 'Ahmad Rosli',
-            avatar: 'https://randomuser.me/api/portraits/men/32.jpg',
-            rating: 4.9,
-            badge: 'Verified Student',
-            noShowRate: '0%',
-            distance: '1.2km away',
-            bio: 'UMS Computer Science student. Experienced barista with 6 months cafe experience.',
-            status: 'Pending'
-          },
-          {
-            id: 'demo-2',
-            worker_id: 'worker-2',
-            gig_id: selectedGigId || 'demo-gig-1',
-            name: 'Nurul Hidayah',
-            avatar: 'https://randomuser.me/api/portraits/women/44.jpg',
-            rating: 5.0,
-            badge: 'High-Tier Pro',
-            noShowRate: '0%',
-            distance: '0.8km away',
-            bio: 'Part-time student at UMS. 12 successful gigs completed.',
-            status: 'Pending'
-          }
-        ]);
+        setApplicants([]);
       }
     } catch (err) {
       console.error('Error fetching applicants:', err);
-      setApplicants([
-        {
-          id: 'demo-1',
-          worker_id: 'worker-1',
-          gig_id: selectedGigId || 'demo-gig-1',
-          name: 'Ahmad Rosli',
-          avatar: 'https://randomuser.me/api/portraits/men/32.jpg',
-          rating: 4.9,
-          badge: 'Verified Student',
-          noShowRate: '0%',
-          distance: '1.2km away',
-          bio: 'UMS Computer Science student. Experienced barista with 6 months cafe experience.',
-          status: 'Pending'
-        }
-      ]);
+      setApplicants([]);
     } finally {
       setLoading(false);
     }
@@ -552,7 +511,7 @@ export default function EmployerDashboardView({ onNavigate, gigs, onAddGig, onLo
         {/* Sidebar */}
         <aside className="hidden md:flex flex-col h-[calc(100vh-64px)] fixed left-0 top-16 w-64 py-6 bg-surface-container-lowest border-r border-outline-variant">
           <div className="px-6 mb-8">
-            <h2 className="font-display font-bold text-lg text-primary">CEDEC Employer Hub</h2>
+            <h2 className="font-display font-bold text-lg text-primary">Employer Hub</h2>
             <p className="text-xs text-on-surface-variant font-medium truncate">{user?.email || 'employer@example.com'}</p>
           </div>
           
@@ -705,7 +664,7 @@ export default function EmployerDashboardView({ onNavigate, gigs, onAddGig, onLo
                         </div>
                         <div>
                           <p className="font-bold text-sm text-on-surface">Universiti Malaysia Sabah</p>
-                          <p className="text-xs text-on-surface-variant">CEDEC Partner Since 2024</p>
+                          <p className="text-xs text-on-surface-variant">Verified Partner Since 2024</p>
                         </div>
                       </div>
                       <div className="text-right">
@@ -772,7 +731,7 @@ export default function EmployerDashboardView({ onNavigate, gigs, onAddGig, onLo
                 <div className="bg-gradient-to-br from-primary/10 via-primary/5 to-transparent border border-primary/20 rounded-2xl p-6 relative overflow-hidden">
                   <div className="absolute top-0 right-0 w-40 h-40 bg-primary/10 rounded-full blur-3xl -mr-10 -mt-10"></div>
                   <div className="relative z-10">
-                    <h2 className="font-display font-bold text-xl text-primary flex items-center gap-2">👋 Welcome to CEDEC Employer Hub!</h2>
+                    <h2 className="font-display font-bold text-xl text-primary flex items-center gap-2">👋 Welcome to Employer Hub!</h2>
                     <p className="text-sm text-on-surface-variant mt-2 max-w-xl leading-relaxed">
                       Post campus job opportunities, review verified UMS student applicants, and manage your shifts — all in one place.
                     </p>

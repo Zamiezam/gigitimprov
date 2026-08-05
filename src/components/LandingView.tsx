@@ -224,7 +224,7 @@ export default function LandingView({ onNavigate, onOpenSelector }: LandingViewP
                     <div className="flex justify-between items-start mb-4">
                       <div>
                         <p className="text-[9px] text-teal-700 font-extrabold tracking-widest leading-none uppercase">KAD MATRIK / STUDENT ID</p>
-                        <p className="text-[11px] font-display font-bold text-slate-900 mt-0.5">Universiti Malaysia Sabah</p>
+                        <p className="text-[11px] font-display font-bold text-slate-900 mt-0.5">Local University</p>
                       </div>
                       <div className="bg-teal-100 text-teal-800 font-bold px-2 py-0.5 rounded text-[8px] font-mono border border-teal-200/30 uppercase">
                         AKTIF / ACTIVE
@@ -240,7 +240,7 @@ export default function LandingView({ onNavigate, onOpenSelector }: LandingViewP
                         />
                       </div>
                       <div className="space-y-0.5 min-w-0">
-                        <p className="font-bold text-[11px] truncate text-slate-800">Ahmad Rosli</p>
+                        <p className="font-bold text-[11px] truncate text-slate-800">Student Name</p>
                         <p className="text-[9px] text-slate-600 truncate font-semibold">Fakulti Komputeran &amp; Informatik</p>
                       </div>
                     </div>
@@ -293,8 +293,8 @@ export default function LandingView({ onNavigate, onOpenSelector }: LandingViewP
                         transition={{ duration: 0.3, ease: "easeOut" }}
                         className="text-[10px] text-teal-700 bg-teal-50/50 border border-teal-200/50 rounded-xl p-3 leading-relaxed font-sans overflow-hidden"
                       >
-                        <p className="font-bold">Match found in UMS Registrar Database!</p>
-                        <p className="mt-0.5 text-neutral-600">Bio-ID verified Ahmad Rosli as active student (Semester 4, Faculty of Computing). Registrar Status ID: #UMS-90218-SECURE.</p>
+                        <p className="font-bold">Match found in University Registrar Database!</p>
+                        <p className="mt-0.5 text-neutral-600">Bio-ID verified Student Name as active student (Semester 4, Faculty of Computing). Registrar Status ID: #UNI-90218-SECURE.</p>
                       </motion.div>
                     )}
                   </div>

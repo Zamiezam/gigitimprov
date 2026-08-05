@@ -214,12 +214,12 @@ export default function WorkerProfileSettings() {
           showToast('❌ AI verification service unavailable. Mocking success.');
           // Mock verification for demo safety
           setIsVerified(true);
-          setUniversity('University Malaysia Sabah (UMS)');
+          setUniversity('Generic University');
           setMatricId('BI22110294');
           setAiVerificationResult({
             isValid: true,
             university: 'UMS',
-            name: fullName || 'Ahmad Rosli',
+            name: fullName || 'Student Name',
             matricId: 'BI22110294',
             reason: 'Demonstration mock verification success'
           });
@@ -371,7 +371,7 @@ export default function WorkerProfileSettings() {
                         value={fullName}
                         onChange={e => setFullName(e.target.value)}
                         className="w-full px-3.5 py-2 rounded-xl border border-outline-variant text-xs focus:outline-primary bg-surface-container-lowest"
-                        placeholder="e.g. Ahmad Rosli"
+                        placeholder="e.g. Student Name"
                       />
                     </div>
                     <div>
@@ -391,7 +391,7 @@ export default function WorkerProfileSettings() {
                         value={university}
                         onChange={e => setUniversity(e.target.value)}
                         className="w-full px-3.5 py-2 rounded-xl border border-outline-variant text-xs focus:outline-primary bg-surface-container-lowest"
-                        placeholder="e.g. Universiti Malaysia Sabah"
+                        placeholder="e.g. Local University"
                       />
                     </div>
                     <div>
