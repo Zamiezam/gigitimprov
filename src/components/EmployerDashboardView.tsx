@@ -1,7 +1,7 @@
 // EmployerDashboardView.tsx - Complete fixed version
 import React, { useState, useEffect } from 'react';
 import { AppView, Gig, Applicant } from '../types';
-import { initialApplicants, initialBackupWorkers } from '../data';
+// Mock data imports removed - all data from Supabase
 import { api, supabase } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import BackupPoolWidget from './BackupPoolWidget';
@@ -100,7 +100,9 @@ export default function EmployerDashboardView({ onNavigate, gigs, onAddGig, onLo
   const [showBackupPool, setShowBackupPool] = useState(false);
   const [applicants, setApplicants] = useState<Applicant[]>([]);
   const [loading, setLoading] = useState(true);
-  const [backupPool] = useState(initialBackupWorkers);
+  // ESG stats
+  const [esgStats, setEsgStats] = useState({ studentsHired: 0, totalWagesPaid: 0, avgRating: 0, totalGigsPosted: 0 });
+  const [uniPartners, setUniPartners] = useState<{name: string; count: number}[]>([]);
   const [employerProfile, setEmployerProfile] = useState<any>(null);
   const [selectedApplicant, setSelectedApplicant] = useState<Applicant | null>(null);
   const [chatMessages, setChatMessages] = useState<Array<{ sender: 'employer' | 'candidate'; text: string; time: string; id?: string }>>([]);
@@ -189,8 +191,65 @@ export default function EmployerDashboardView({ onNavigate, gigs, onAddGig, onLo
       fetchMyGigs();
       fetchAllApplicants();
       fetchEmployerProfile();
+      fetchEsgStats();
     }
   }, [user]);
+
+  const fetchEsgStats = async () => {
+    if (!user) return;
+    try {
+      // Students hired (distinct worker_ids)
+      const { data: hiredData } = await supabase
+        .from('hired_workers')
+        .select('worker_id, amount, payment_status, rating, rating_given')
+        .eq('employer_id', user.id);
+      
+      if (hiredData) {
+        const uniqueWorkers = new Set(hiredData.map(h => h.worker_id));
+        const totalPaid = hiredData
+          .filter(h => h.payment_status === 'paid')
+          .reduce((sum, h) => sum + (h.amount || 0), 0);
+        const rated = hiredData.filter(h => h.rating_given && h.rating);
+        const avgRating = rated.length > 0 
+          ? rated.reduce((sum, h) => sum + (h.rating || 0), 0) / rated.length 
+          : 0;
+
+        setEsgStats({
+          studentsHired: uniqueWorkers.size,
+          totalWagesPaid: totalPaid,
+          avgRating: Math.round(avgRating * 10) / 10,
+          totalGigsPosted: myGigs.length
+        });
+      }
+
+      // University partnerships - count workers by university
+      const { data: hiredWorkerIds } = await supabase
+        .from('hired_workers')
+        .select('worker_id')
+        .eq('employer_id', user.id);
+      
+      if (hiredWorkerIds && hiredWorkerIds.length > 0) {
+        const workerIds = [...new Set(hiredWorkerIds.map(h => h.worker_id))];
+        const { data: profiles } = await supabase
+          .from('profiles')
+          .select('university')
+          .in('id', workerIds)
+          .not('university', 'is', null);
+        
+        if (profiles) {
+          const uniCounts: Record<string, number> = {};
+          profiles.forEach(p => {
+            if (p.university) {
+              uniCounts[p.university] = (uniCounts[p.university] || 0) + 1;
+            }
+          });
+          setUniPartners(Object.entries(uniCounts).map(([name, count]) => ({ name, count })));
+        }
+      }
+    } catch (err) {
+      console.error('Error fetching ESG stats:', err);
+    }
+  };
 
   const fetchEmployerProfile = async () => {
     if (!user) return;
@@ -255,13 +314,15 @@ export default function EmployerDashboardView({ onNavigate, gigs, onAddGig, onLo
           worker_id: app.worker_id,
           gig_id: app.gig_id,
           name: app.profiles?.full_name || 'Student Applicant',
-          avatar: app.profiles?.avatar_url || `https://randomuser.me/api/portraits/${Math.random() > 0.5 ? 'women' : 'men'}/${Math.floor(Math.random() * 100)}.jpg`,
-          rating: 4 + Math.random(),
+          avatar: app.profiles?.avatar_url || `https://randomuser.me/api/portraits/men/1.jpg`,
+          rating: parseFloat(app.profiles?.reliability_score || '4.5'),
           badge: app.profiles?.is_verified ? 'Verified Student' : 'Student',
-          noShowRate: `${Math.floor(Math.random() * 10)}%`,
-          distance: `${Math.floor(Math.random() * 5) + 1}km away`,
-          bio: app.cover_letter || `Experienced student worker looking for this position. Reliable and hardworking.`,
-          status: app.status || 'Pending'
+          noShowRate: '0%',
+          distance: app.profiles?.city ? `${app.profiles.city}` : 'Location unknown',
+          bio: app.cover_letter || (app.profiles?.bio ? app.profiles.bio : 'Student worker looking for this position.'),
+          status: app.status || 'Pending',
+          income_classification: app.profiles?.income_classification || null,
+          skills: app.profiles?.skills || [],
         }));
         setApplicants(mappedApplicants);
       } else {
@@ -636,16 +697,16 @@ export default function EmployerDashboardView({ onNavigate, gigs, onAddGig, onLo
                   <div className="w-10 h-10 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center mb-4">
                     <Users size={20} />
                   </div>
-                  <h3 className="text-3xl font-black text-on-surface mb-1">120</h3>
+                  <h3 className="text-3xl font-black text-on-surface mb-1">{esgStats.studentsHired}</h3>
                   <p className="text-xs font-bold text-on-surface-variant uppercase tracking-wider">Students Hired</p>
-                  <p className="text-[10px] text-green-600 font-bold mt-2">↑ +15% this quarter</p>
+                  <p className="text-[10px] text-on-surface-variant font-medium mt-2">Unique workers engaged</p>
                 </div>
                 
                 <div className="bg-white p-5 rounded-2xl border border-outline-variant shadow-xs">
                   <div className="w-10 h-10 rounded-full bg-amber-50 text-amber-600 flex items-center justify-center mb-4">
                     <CreditCard size={20} />
                   </div>
-                  <h3 className="text-3xl font-black text-on-surface mb-1">RM34,000</h3>
+                  <h3 className="text-3xl font-black text-on-surface mb-1">RM{esgStats.totalWagesPaid.toLocaleString()}</h3>
                   <p className="text-xs font-bold text-on-surface-variant uppercase tracking-wider">Total Wages Paid</p>
                   <p className="text-[10px] text-green-600 font-bold mt-2">100% via GigIT Wallet</p>
                 </div>
@@ -654,18 +715,18 @@ export default function EmployerDashboardView({ onNavigate, gigs, onAddGig, onLo
                   <div className="w-10 h-10 rounded-full bg-purple-50 text-purple-600 flex items-center justify-center mb-4">
                     <Sparkles size={20} />
                   </div>
-                  <h3 className="text-3xl font-black text-on-surface mb-1">52</h3>
-                  <p className="text-xs font-bold text-on-surface-variant uppercase tracking-wider">First-Time Workers</p>
-                  <p className="text-[10px] text-on-surface-variant font-medium mt-2">Empowering youth</p>
+                  <h3 className="text-3xl font-black text-on-surface mb-1">{esgStats.totalGigsPosted}</h3>
+                  <p className="text-xs font-bold text-on-surface-variant uppercase tracking-wider">Gigs Posted</p>
+                  <p className="text-[10px] text-on-surface-variant font-medium mt-2">Creating opportunities</p>
                 </div>
 
                 <div className="bg-white p-5 rounded-2xl border border-outline-variant shadow-xs">
                   <div className="w-10 h-10 rounded-full bg-green-50 text-green-600 flex items-center justify-center mb-4">
                     <Shield size={20} />
                   </div>
-                  <h3 className="text-3xl font-black text-on-surface mb-1">4.8</h3>
-                  <p className="text-xs font-bold text-on-surface-variant uppercase tracking-wider">Avg SWEAT™️ Score</p>
-                  <p className="text-[10px] text-green-600 font-bold mt-2">Top tier reliability</p>
+                  <h3 className="text-3xl font-black text-on-surface mb-1">{esgStats.avgRating > 0 ? esgStats.avgRating : '—'}</h3>
+                  <p className="text-xs font-bold text-on-surface-variant uppercase tracking-wider">Avg Worker Rating</p>
+                  <p className="text-[10px] text-on-surface-variant font-medium mt-2">{esgStats.avgRating >= 4.5 ? 'Top tier reliability' : esgStats.avgRating > 0 ? 'Building trust' : 'No ratings yet'}</p>
                 </div>
               </div>
 
@@ -673,36 +734,31 @@ export default function EmployerDashboardView({ onNavigate, gigs, onAddGig, onLo
                 <div className="lg:col-span-2 bg-white rounded-3xl border border-outline-variant p-6 shadow-sm">
                   <h3 className="font-bold text-lg text-on-surface mb-4">University Partnerships</h3>
                   <div className="space-y-4">
-                    <div className="p-4 border border-outline-variant rounded-2xl flex items-center justify-between">
-                      <div className="flex items-center gap-4">
-                        <div className="w-12 h-12 bg-surface-container-low rounded-xl flex items-center justify-center font-black text-primary">
-                          UMS
+                    {uniPartners.length > 0 ? (
+                      uniPartners.map((uni) => (
+                        <div key={uni.name} className="p-4 border border-outline-variant rounded-2xl flex items-center justify-between">
+                          <div className="flex items-center gap-4">
+                            <div className="w-12 h-12 bg-surface-container-low rounded-xl flex items-center justify-center font-black text-primary text-xs">
+                              {uni.name.split(' ').map(w => w[0]).join('').substring(0, 4)}
+                            </div>
+                            <div>
+                              <p className="font-bold text-sm text-on-surface">{uni.name}</p>
+                              <p className="text-xs text-on-surface-variant">Partner Institution</p>
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <p className="font-black text-lg text-primary">{uni.count}</p>
+                            <p className="text-[10px] uppercase font-bold text-on-surface-variant tracking-wider">Students</p>
+                          </div>
                         </div>
-                        <div>
-                          <p className="font-bold text-sm text-on-surface">Universiti Malaysia Sabah</p>
-                          <p className="text-xs text-on-surface-variant">Verified Partner Since 2024</p>
-                        </div>
+                      ))
+                    ) : (
+                      <div className="text-center py-8">
+                        <Users size={32} className="mx-auto text-on-surface-variant mb-3" />
+                        <p className="text-sm text-on-surface-variant">No university partnerships yet.</p>
+                        <p className="text-xs text-on-surface-variant mt-1">Hire students to build partnerships!</p>
                       </div>
-                      <div className="text-right">
-                        <p className="font-black text-lg text-primary">85</p>
-                        <p className="text-[10px] uppercase font-bold text-on-surface-variant tracking-wider">Students</p>
-                      </div>
-                    </div>
-                    <div className="p-4 border border-outline-variant rounded-2xl flex items-center justify-between">
-                      <div className="flex items-center gap-4">
-                        <div className="w-12 h-12 bg-surface-container-low rounded-xl flex items-center justify-center font-black text-primary">
-                          UiTM
-                        </div>
-                        <div>
-                          <p className="font-bold text-sm text-on-surface">Universiti Teknologi MARA</p>
-                          <p className="text-xs text-on-surface-variant">Verified Partner</p>
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <p className="font-black text-lg text-primary">35</p>
-                        <p className="text-[10px] uppercase font-bold text-on-surface-variant tracking-wider">Students</p>
-                      </div>
-                    </div>
+                    )}
                   </div>
                 </div>
 
@@ -881,17 +937,25 @@ export default function EmployerDashboardView({ onNavigate, gigs, onAddGig, onLo
                                 <h4 className="font-semibold text-on-surface text-base">{applicant.name}</h4>
                                 <div className="flex items-center gap-2 mt-1">
                                   <span className="flex items-center gap-0.5 text-secondary font-bold text-xs">
-                                    <Star size={14} fill="currentColor" /> {applicant.rating}
+                                    <Star size={14} fill="currentColor" /> {applicant.rating.toFixed(1)}
                                   </span>
                                   <span className="text-outline-variant text-xs">•</span>
                                   <span className="text-tertiary font-semibold text-xs flex items-center gap-0.5 bg-tertiary/10 px-2 py-0.5 rounded-full">
                                     <Shield size={12} /> {applicant.badge}
                                   </span>
+                                  {(applicant as any).income_classification && (
+                                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
+                                      (applicant as any).income_classification === 'B40' ? 'bg-blue-50 text-blue-700 border-blue-200' :
+                                      (applicant as any).income_classification === 'M40' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
+                                      'bg-amber-50 text-amber-700 border-amber-200'
+                                    }`}>
+                                      {(applicant as any).income_classification}
+                                    </span>
+                                  )}
                                 </div>
                               </div>
                               <div className="text-right">
-                                <p className="text-error font-bold text-xs">No-Show: {applicant.noShowRate}</p>
-                                <p className="text-on-surface-variant text-xs mt-0.5">{applicant.distance}</p>
+                                <p className="text-on-surface-variant text-xs flex items-center gap-1"><MapPin size={12} /> {applicant.distance}</p>
                               </div>
                             </div>
                             

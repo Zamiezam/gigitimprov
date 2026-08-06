@@ -101,22 +101,7 @@ export default function HiredWorkers() {
       if (data && data.length > 0) {
         setHiredWorkers(data as HiredWorker[]);
       } else {
-        setHiredWorkers([
-          {
-            id: 'mock-hired-1',
-            worker_id: 'worker-2',
-            employer_id: user.id,
-            employer_name: employerProfile?.company_name || employerProfile?.full_name || 'Employer',
-            worker_name: 'Nurul Hidayah',
-            worker_avatar: 'https://randomuser.me/api/portraits/women/44.jpg',
-            gig_id: 'mock-gig-2',
-            gig_title: 'Waitress for Weekend Event',
-            amount: 75,
-            status: 'active',
-            payment_status: 'pending',
-            created_at: new Date().toISOString()
-          }
-        ] as any[]);
+        setHiredWorkers([]);
       }
     } catch (err) {
       console.error('Error fetching hired workers:', err);

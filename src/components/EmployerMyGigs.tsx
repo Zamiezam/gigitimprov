@@ -78,88 +78,20 @@ export default function EmployerMyGigs({ onNavigate, onPostNewGig }: EmployerMyG
         .order('created_at', { ascending: false });
       
       if (!error && data) {
+        setMyGigs(data);
         if (data.length > 0) {
-          setMyGigs(data);
           await fetchApplicantsCounts(data);
-        } else {
-          setMyGigs([
-            {
-              id: 'mock-gig-employer',
-              title: 'Event Helper',
-              employer: 'Sabah Convention Centre',
-              locationName: 'Kota Kinabalu',
-              rate: 'RM 12/hr',
-              duration: '8 Hours',
-              category: 'Event',
-              employer_id: user?.id,
-              status: 'Open',
-              created_at: new Date().toISOString(),
-              distance: '1.2km'
-            } as any
-          ]);
         }
+      } else {
+        setMyGigs([]);
       }
     } catch (err) {
       console.error('Error fetching gigs:', err);
+      setMyGigs([]);
     } finally {
       setLoading(false);
     }
   };
-
-  const seedDummyGigs = async () => {
-    if (myGigs.length === 0 && !loading) {
-      const dummyGigs = [
-        {
-          title: 'Weekend Barista',
-          employer: employerProfile?.company_name || user?.user_metadata?.full_name?.split(' ')[0] || 'Employer',
-          employer_id: user?.id,
-          employer_name: employerProfile?.company_name || employerProfile?.full_name || 'Employer',
-          location_name: 'KK Town',
-          distance: '0.5km away',
-          rate: 'RM 12/hr',
-          period: 'Hour',
-          category: 'F&B',
-          is_instant: false,
-          duration: '6 Hours',
-          description: 'Looking for a friendly barista for weekend morning shifts. Training provided!',
-          tags: ['Barista', 'Weekend', 'Student Friendly'],
-          coords: { x: 58, y: 55, lat: 5.9749, lng: 116.0724 },
-          status: 'open',
-          created_at: new Date().toISOString()
-        },
-        {
-          title: 'Event Crew Needed',
-          employer: employerProfile?.company_name || user?.user_metadata?.full_name?.split(' ')[0] || 'Employer',
-          employer_id: user?.id,
-          employer_name: employerProfile?.company_name || employerProfile?.full_name || 'Employer',
-          location_name: 'SICC',
-          distance: '1.2km away',
-          rate: 'RM 15/hr',
-          period: 'Hour',
-          category: 'Event',
-          is_instant: false,
-          duration: '8 Hours',
-          description: 'Need 2 crew members for upcoming tech expo. Setup and registration duties.',
-          tags: ['Event', 'Weekend', 'Immediate Start'],
-          coords: { x: 67, y: 35, lat: 6.0400, lng: 116.1200 },
-          status: 'open',
-          created_at: new Date().toISOString()
-        }
-      ];
-      
-      for (const gig of dummyGigs) {
-        await supabase.from('gigs').insert([gig]);
-      }
-      await fetchMyGigs();
-    }
-  };
-
-  // Call it in useEffect
-  useEffect(() => {
-    if (user) {
-      fetchMyGigs().then(() => seedDummyGigs());
-    }
-  }, [user]);
   const fetchApplicantsCounts = async (gigs: Gig[]) => {
     const counts: Record<string, number> = {};
     for (const gig of gigs) {
