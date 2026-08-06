@@ -40,6 +40,20 @@ export default function WorkerProfileSettings() {
   const [transport, setTransport] = useState('Public Transport');
   const [skills, setSkills] = useState<string[]>([]);
   const [experience, setExperience] = useState('');
+  
+  // New Upwork-style worker fields
+  const [educationLevel, setEducationLevel] = useState('');
+  const [languages, setLanguages] = useState<string[]>([]);
+  const [preferredCategories, setPreferredCategories] = useState<string[]>([]);
+  const [bankName, setBankName] = useState('');
+  const [bankAccountNumber, setBankAccountNumber] = useState('');
+  const [expectedHourlyRate, setExpectedHourlyRate] = useState<number | ''>('');
+  const [commitmentsDescription, setCommitmentsDescription] = useState('');
+  const [googleCalendarId, setGoogleCalendarId] = useState('');
+  const [emergencyReady, setEmergencyReady] = useState(false);
+  const [emergencyRadiusKm, setEmergencyRadiusKm] = useState<number | ''>(5);
+  const [householdIncome, setHouseholdIncome] = useState<number | ''>('');
+  const [incomeClassification, setIncomeClassification] = useState('');
 
   // Local helper states
   const [customAvatarUrl, setCustomAvatarUrl] = useState('');
@@ -105,6 +119,20 @@ export default function WorkerProfileSettings() {
         setTransport(transportVal);
         setSkills(skillsVal);
         setExperience(expVal);
+
+        // Map new fields
+        setEducationLevel(data.education_level || '');
+        setLanguages(data.languages || []);
+        setPreferredCategories(data.preferred_categories || []);
+        setBankName(data.bank_name || '');
+        setBankAccountNumber(data.bank_account_number || '');
+        setExpectedHourlyRate(data.expected_hourly_rate || '');
+        setCommitmentsDescription(data.commitments_description || '');
+        setGoogleCalendarId(data.google_calendar_id || '');
+        setEmergencyReady(data.emergency_ready || false);
+        setEmergencyRadiusKm(data.emergency_radius_km || 5);
+        setHouseholdIncome(data.household_income || '');
+        setIncomeClassification(data.income_classification || '');
       }
     } catch (err) {
       console.error('Error fetching profile:', err);
@@ -124,6 +152,18 @@ export default function WorkerProfileSettings() {
         university: university,
         matric_id: matricId,
         is_verified: isVerified,
+        education_level: educationLevel,
+        languages: languages,
+        preferred_categories: preferredCategories,
+        bank_name: bankName,
+        bank_account_number: bankAccountNumber,
+        expected_hourly_rate: expectedHourlyRate === '' ? null : expectedHourlyRate,
+        commitments_description: commitmentsDescription,
+        google_calendar_id: googleCalendarId,
+        emergency_ready: emergencyReady,
+        emergency_radius_km: emergencyRadiusKm === '' ? null : emergencyRadiusKm,
+        household_income: householdIncome === '' ? null : householdIncome,
+        income_classification: householdIncome === '' ? null : (Number(householdIncome) <= 4850 ? 'B40' : Number(householdIncome) <= 10970 ? 'M40' : 'T20'),
         updated_at: new Date().toISOString()
       };
 
@@ -433,6 +473,84 @@ export default function WorkerProfileSettings() {
                       <option value="Walk">Walking Only (UMS Campus vicinity)</option>
                       <option value="None">None</option>
                     </select>
+                  </div>
+                </div>
+
+                {/* Section 2b: Financial & Classification */}
+                <div>
+                  <h3 className="font-semibold text-sm mb-3 text-on-surface pb-1 border-b border-outline-variant/40 flex items-center gap-1.5"><Shield size={16} className="text-primary" /> Financial & Classification</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-[10px] text-on-surface-variant font-bold uppercase tracking-wider mb-1">Household Income (RM/month)</label>
+                      <input 
+                        type="number" 
+                        value={householdIncome}
+                        onChange={e => setHouseholdIncome(e.target.value ? Number(e.target.value) : '')}
+                        className="w-full px-3.5 py-2 rounded-xl border border-outline-variant text-xs focus:outline-primary bg-surface-container-lowest"
+                        placeholder="e.g. 3000"
+                      />
+                      {householdIncome !== '' && (
+                        <p className="text-[10px] text-primary mt-1">Classification: {Number(householdIncome) <= 4850 ? 'B40' : Number(householdIncome) <= 10970 ? 'M40' : 'T20'}</p>
+                      )}
+                    </div>
+                    <div>
+                      <label className="block text-[10px] text-on-surface-variant font-bold uppercase tracking-wider mb-1">Expected Hourly Rate (RM)</label>
+                      <input 
+                        type="number" 
+                        value={expectedHourlyRate}
+                        onChange={e => setExpectedHourlyRate(e.target.value ? Number(e.target.value) : '')}
+                        className="w-full px-3.5 py-2 rounded-xl border border-outline-variant text-xs focus:outline-primary bg-surface-container-lowest"
+                        placeholder="e.g. 15"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] text-on-surface-variant font-bold uppercase tracking-wider mb-1">Bank Name</label>
+                      <input 
+                        type="text" 
+                        value={bankName}
+                        onChange={e => setBankName(e.target.value)}
+                        className="w-full px-3.5 py-2 rounded-xl border border-outline-variant text-xs focus:outline-primary bg-surface-container-lowest"
+                        placeholder="e.g. Maybank"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] text-on-surface-variant font-bold uppercase tracking-wider mb-1">Bank Account Number</label>
+                      <input 
+                        type="text" 
+                        value={bankAccountNumber}
+                        onChange={e => setBankAccountNumber(e.target.value)}
+                        className="w-full px-3.5 py-2 rounded-xl border border-outline-variant text-xs focus:outline-primary bg-surface-container-lowest"
+                        placeholder="e.g. 160123456789"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Section 2c: Emergency SOS */}
+                <div>
+                  <h3 className="font-semibold text-sm mb-3 text-on-surface pb-1 border-b border-outline-variant/40 flex items-center gap-1.5"><Bell size={16} className="text-primary" /> Emergency SOS Settings</h3>
+                  <div className="flex flex-col gap-3">
+                    <label className="flex items-center gap-2 cursor-pointer bg-surface-container-lowest p-3 rounded-xl border border-outline-variant">
+                      <input 
+                        type="checkbox" 
+                        checked={emergencyReady}
+                        onChange={e => setEmergencyReady(e.target.checked)}
+                        className="rounded text-primary focus:ring-primary w-4 h-4"
+                      />
+                      <span className="text-xs font-medium">I am willing to accept Emergency SOS gigs (Immediate Start)</span>
+                    </label>
+                    {emergencyReady && (
+                      <div>
+                        <label className="block text-[10px] text-on-surface-variant font-bold uppercase tracking-wider mb-1">Max Travel Radius for SOS Gigs (km)</label>
+                        <input 
+                          type="number" 
+                          value={emergencyRadiusKm}
+                          onChange={e => setEmergencyRadiusKm(e.target.value ? Number(e.target.value) : '')}
+                          className="w-full px-3.5 py-2 rounded-xl border border-outline-variant text-xs focus:outline-primary bg-surface-container-lowest"
+                          placeholder="e.g. 5"
+                        />
+                      </div>
+                    )}
                   </div>
                 </div>
 

@@ -414,7 +414,14 @@ export default function WorkerBrowseView({
               />
               <div>
                 <p className="font-semibold text-sm text-on-surface truncate max-w-[130px]">{workerName}</p>
-                <p className="text-[11px] text-on-surface-variant font-medium">{profile?.is_verified ? 'Verified Student' : 'Unverified Account'}</p>
+                <p className="text-[11px] text-on-surface-variant font-medium flex items-center gap-2">
+                  {profile?.is_verified ? 'Verified Student' : 'Unverified Account'}
+                  {profile?.income_classification && (
+                    <span className="bg-primary/10 text-primary px-1.5 py-0.5 rounded font-bold text-[9px]">
+                      {profile.income_classification}
+                    </span>
+                  )}
+                </p>
               </div>
             </div>
 
