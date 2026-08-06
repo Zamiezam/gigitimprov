@@ -94,3 +94,42 @@ export interface Conversation {
   last_message_time: string;
   unread_count: number;
 }
+export interface Profile {
+  id: string;
+  full_name?: string;
+  avatar_url?: string;
+  role?: 'worker' | 'employer' | 'both';
+  is_verified?: boolean;
+  university?: string;
+  matric_id?: string;
+  is_available?: boolean;
+  reliability_score?: string;
+  company_name?: string;
+  ssm_number?: string;
+  company_address?: string;
+  phone_number?: string;
+  industry?: string;
+  company_size?: string;
+  company_description?: string;
+  website?: string;
+  city?: string;
+  state?: string;
+  postal_code?: string;
+}
+
+// Additional Worker Profile Fields
+export interface WorkerProfile extends Profile {
+  bio?: string;
+  education_level?: string;
+  resume_url?: string;
+  skills?: string[];
+  languages?: string[];
+  preferred_categories?: string[];
+  bank_name?: string;
+  bank_account_number?: string;
+  expected_hourly_rate?: number;
+  commitments_description?: string;
+  google_calendar_id?: string;
+  emergency_ready?: boolean;
+  emergency_radius_km?: number;
+}

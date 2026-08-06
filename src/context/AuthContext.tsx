@@ -7,7 +7,7 @@ interface AuthContextType {
   user: User | null;
   userRole: 'worker' | 'employer' | null;
   loading: boolean;
-  signUpWithEmail: (email: string, password: string, fullName: string, role: 'worker' | 'employer') => Promise<void>;
+  signUpWithEmail: (email: string, password: string, fullName: string, role: 'worker' | 'employer', extraData?: Record<string, any>) => Promise<void>;
   signInWithEmail: (email: string, password: string) => Promise<void>;
   logOut: () => Promise<void>;
   switchRole: (role: 'worker' | 'employer') => Promise<void>;
@@ -66,7 +66,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => subscription.unsubscribe();
   }, []);
 
-  const signUpWithEmail = async (email: string, password: string, fullName: string, role: 'worker' | 'employer') => {
+  const signUpWithEmail = async (email: string, password: string, fullName: string, role: 'worker' | 'employer', extraData?: Record<string, any>) => {
     const { data: authData, error: signUpError } = await supabase.auth.signUp({
       email,
       password,
@@ -90,7 +90,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         .eq('id', authData.user?.id)
         .single();
       
-      if (profile) break;
+      if (profile) {
+        // If extraData is provided, update the profile with it
+        if (extraData && Object.keys(extraData).length > 0) {
+          const { error: updateError } = await supabase
+            .from('profiles')
+            .update(extraData)
+            .eq('id', authData.user?.id);
+            
+          if (updateError) {
+            console.error('Error updating profile with extraData:', updateError);
+          }
+        }
+        break;
+      }
       retries++;
     }
   };
