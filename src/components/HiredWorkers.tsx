@@ -41,6 +41,14 @@ export default function HiredWorkers() {
   const { processPayment, walletBalance, refreshPayments } = usePayment();
   const [hiredWorkers, setHiredWorkers] = useState<HiredWorker[]>([]);
   const [loading, setLoading] = useState(true);
+  const [employerProfile, setEmployerProfile] = useState<any>(null);
+
+  // Fetch employer profile
+  useEffect(() => {
+    if (!user) return;
+    supabase.from('profiles').select('full_name, company_name').eq('id', user.id).single()
+      .then(({ data }) => { if (data) setEmployerProfile(data); });
+  }, [user]);
   const [refreshing, setRefreshing] = useState(false);
   const [selectedWorker, setSelectedWorker] = useState<HiredWorker | null>(null);
   const [showReviewModal, setShowReviewModal] = useState(false);
@@ -98,7 +106,7 @@ export default function HiredWorkers() {
             id: 'mock-hired-1',
             worker_id: 'worker-2',
             employer_id: user.id,
-            employer_name: 'Employer',
+            employer_name: employerProfile?.company_name || employerProfile?.full_name || 'Employer',
             worker_name: 'Nurul Hidayah',
             worker_avatar: 'https://randomuser.me/api/portraits/women/44.jpg',
             gig_id: 'mock-gig-2',

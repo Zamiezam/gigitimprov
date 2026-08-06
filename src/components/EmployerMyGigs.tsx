@@ -32,6 +32,14 @@ export default function EmployerMyGigs({ onNavigate, onPostNewGig }: EmployerMyG
   // Backup Pool states
   const [showBackupPool, setShowBackupPool] = useState(false);
   const [selectedGigForBackup, setSelectedGigForBackup] = useState<Gig | null>(null);
+  const [employerProfile, setEmployerProfile] = useState<any>(null);
+
+  // Fetch employer profile
+  useEffect(() => {
+    if (!user) return;
+    supabase.from('profiles').select('full_name, company_name').eq('id', user.id).single()
+      .then(({ data }) => { if (data) setEmployerProfile(data); });
+  }, [user]);
 
   // Fetch employer's gigs
   useEffect(() => {
@@ -103,9 +111,9 @@ export default function EmployerMyGigs({ onNavigate, onPostNewGig }: EmployerMyG
       const dummyGigs = [
         {
           title: 'Weekend Barista',
-          employer: user?.user_metadata?.full_name?.split(' ')[0] || 'Employer',
+          employer: employerProfile?.company_name || user?.user_metadata?.full_name?.split(' ')[0] || 'Employer',
           employer_id: user?.id,
-          employer_name: user?.user_metadata?.full_name || 'Employer',
+          employer_name: employerProfile?.company_name || employerProfile?.full_name || 'Employer',
           location_name: 'KK Town',
           distance: '0.5km away',
           rate: 'RM 12/hr',
@@ -121,9 +129,9 @@ export default function EmployerMyGigs({ onNavigate, onPostNewGig }: EmployerMyG
         },
         {
           title: 'Event Crew Needed',
-          employer: user?.user_metadata?.full_name?.split(' ')[0] || 'Employer',
+          employer: employerProfile?.company_name || user?.user_metadata?.full_name?.split(' ')[0] || 'Employer',
           employer_id: user?.id,
-          employer_name: user?.user_metadata?.full_name || 'Employer',
+          employer_name: employerProfile?.company_name || employerProfile?.full_name || 'Employer',
           location_name: 'SICC',
           distance: '1.2km away',
           rate: 'RM 15/hr',

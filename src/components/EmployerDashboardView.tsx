@@ -101,6 +101,7 @@ export default function EmployerDashboardView({ onNavigate, gigs, onAddGig, onLo
   const [applicants, setApplicants] = useState<Applicant[]>([]);
   const [loading, setLoading] = useState(true);
   const [backupPool] = useState(initialBackupWorkers);
+  const [employerProfile, setEmployerProfile] = useState<any>(null);
   const [selectedApplicant, setSelectedApplicant] = useState<Applicant | null>(null);
   const [chatMessages, setChatMessages] = useState<Array<{ sender: 'employer' | 'candidate'; text: string; time: string; id?: string }>>([]);
   const [newMessageText, setNewMessageText] = useState('');
@@ -187,8 +188,23 @@ export default function EmployerDashboardView({ onNavigate, gigs, onAddGig, onLo
     if (user) {
       fetchMyGigs();
       fetchAllApplicants();
+      fetchEmployerProfile();
     }
   }, [user]);
+
+  const fetchEmployerProfile = async () => {
+    if (!user) return;
+    try {
+      const { data } = await supabase
+        .from('profiles')
+        .select('full_name, company_name, company_address, city, state, phone_number')
+        .eq('id', user.id)
+        .single();
+      if (data) setEmployerProfile(data);
+    } catch (err) {
+      console.error('Error fetching employer profile:', err);
+    }
+  };
 
   useEffect(() => {
     // Subscribe to real-time gig changes
@@ -330,7 +346,7 @@ export default function EmployerDashboardView({ onNavigate, gigs, onAddGig, onLo
           worker_name: applicant.name,
           worker_avatar: applicant.avatar,
           employer_id: user.id,
-          employer_name: user.email?.split('@')[0] || 'Employer',
+          employer_name: employerProfile?.company_name || employerProfile?.full_name || user.email?.split('@')[0] || 'Employer',
           gig_title: gig.title,
           gig_id: gigId,
           amount: totalAmount,
@@ -394,9 +410,9 @@ export default function EmployerDashboardView({ onNavigate, gigs, onAddGig, onLo
     
     const newGig = {
       title: formData.title,
-      employer: user?.user_metadata?.full_name?.split(' ')[0] || user?.email?.split('@')[0] || 'Employer',
+      employer: employerProfile?.company_name || user?.user_metadata?.full_name?.split(' ')[0] || user?.email?.split('@')[0] || 'Employer',
       employer_id: user?.id || '',
-      employer_name: user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'Employer',
+      employer_name: employerProfile?.company_name || employerProfile?.full_name || user?.email?.split('@')[0] || 'Employer',
       locationName: formData.location,
       distance: '0.5km away',
       rate: formData.rate.includes('RM') ? formData.rate : `RM ${formData.rate}${!formData.rate.includes('/hr') ? '/hr' : ''}`,
@@ -472,7 +488,7 @@ export default function EmployerDashboardView({ onNavigate, gigs, onAddGig, onLo
 
   const getGreeting = () => {
     const hour = new Date().getHours();
-    const name = user?.user_metadata?.full_name?.split(' ')[0] || 'Employer';
+    const name = employerProfile?.full_name?.split(' ')[0] || user?.user_metadata?.full_name?.split(' ')[0] || 'Employer';
     if (hour < 12) return `Good Morning, ${name}`;
     if (hour < 18) return `Good Afternoon, ${name}`;
     return `Good Evening, ${name}`;

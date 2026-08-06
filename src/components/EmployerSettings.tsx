@@ -6,7 +6,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { 
   User, Mail, Phone, MapPin, Building, Save, Camera, Shield, 
   Bell, CreditCard, Upload, FileText, CheckCircle, XCircle, 
-  Clock 
+  Clock, Globe, Hash, Grid, AlignLeft, Map 
 } from 'lucide-react';
 
 export default function EmployerSettings() {
@@ -17,10 +17,17 @@ export default function EmployerSettings() {
   const [profile, setProfile] = useState({
     full_name: '',
     email: '',
-    phone: '',
-    business_name: '',
-    business_address: '',
-    business_type: '',
+    phone_number: '',
+    company_name: '',
+    ssm_number: '',
+    industry: '',
+    company_size: '',
+    company_description: '',
+    website: '',
+    company_address: '',
+    city: '',
+    state: '',
+    postal_code: '',
     avatar_url: '',
     ssm_certificate_url: '',
     verification_status: 'pending'
@@ -50,10 +57,17 @@ export default function EmployerSettings() {
         setProfile({
           full_name: data.full_name || '',
           email: data.email || user?.email || '',
-          phone: data.phone || '',
-          business_name: data.business_name || '',
-          business_address: data.business_address || '',
-          business_type: data.business_type || '',
+          phone_number: data.phone_number || '',
+          company_name: data.company_name || '',
+          ssm_number: data.ssm_number || '',
+          industry: data.industry || '',
+          company_size: data.company_size || '',
+          company_description: data.company_description || '',
+          website: data.website || '',
+          company_address: data.company_address || '',
+          city: data.city || '',
+          state: data.state || '',
+          postal_code: data.postal_code || '',
           avatar_url: data.avatar_url || '',
           ssm_certificate_url: data.ssm_certificate_url || '',
           verification_status: data.verification_status || 'pending'
@@ -73,10 +87,17 @@ export default function EmployerSettings() {
         .from('profiles')
         .update({
           full_name: profile.full_name,
-          phone: profile.phone,
-          business_name: profile.business_name,
-          business_address: profile.business_address,
-          business_type: profile.business_type,
+          phone_number: profile.phone_number,
+          company_name: profile.company_name,
+          ssm_number: profile.ssm_number,
+          industry: profile.industry,
+          company_size: profile.company_size,
+          company_description: profile.company_description,
+          website: profile.website,
+          company_address: profile.company_address,
+          city: profile.city,
+          state: profile.state,
+          postal_code: profile.postal_code,
           updated_at: new Date().toISOString()
         })
         .eq('id', user?.id);
@@ -223,7 +244,7 @@ export default function EmployerSettings() {
               
               <div>
                 <label className="block text-xs font-bold mb-1">Phone Number</label>
-                <input type="tel" value={profile.phone} onChange={(e) => setProfile({...profile, phone: e.target.value})}
+                <input type="tel" value={profile.phone_number} onChange={(e) => setProfile({...profile, phone_number: e.target.value})}
                   className="w-full px-4 py-2 rounded-xl border focus:outline-primary text-sm" placeholder="+6012-3456789" />
               </div>
             </div>
@@ -234,29 +255,80 @@ export default function EmployerSettings() {
             <h3 className="font-semibold text-lg mb-4 flex items-center gap-2"><Building size={20} /> Business Information</h3>
             
             <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-bold mb-1">Company / Business Name</label>
+                  <input type="text" value={profile.company_name} onChange={(e) => setProfile({...profile, company_name: e.target.value})}
+                    className="w-full px-4 py-2 rounded-xl border focus:outline-primary text-sm" />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold mb-1">SSM Registration Number</label>
+                  <input type="text" value={profile.ssm_number} onChange={(e) => setProfile({...profile, ssm_number: e.target.value})}
+                    className="w-full px-4 py-2 rounded-xl border focus:outline-primary text-sm" placeholder="e.g. 202301123456" />
+                </div>
+              </div>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-bold mb-1">Industry</label>
+                  <input type="text" value={profile.industry} onChange={(e) => setProfile({...profile, industry: e.target.value})}
+                    className="w-full px-4 py-2 rounded-xl border focus:outline-primary text-sm" placeholder="e.g. F&B, Technology" />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold mb-1">Company Size</label>
+                  <select value={profile.company_size} onChange={(e) => setProfile({...profile, company_size: e.target.value})}
+                    className="w-full px-4 py-2 rounded-xl border focus:outline-primary text-sm">
+                    <option value="">Select size</option>
+                    <option value="1-10">1-10 employees</option>
+                    <option value="11-50">11-50 employees</option>
+                    <option value="51-200">51-200 employees</option>
+                    <option value="200+">200+ employees</option>
+                  </select>
+                </div>
+              </div>
+
               <div>
-                <label className="block text-xs font-bold mb-1">Business Name</label>
-                <input type="text" value={profile.business_name} onChange={(e) => setProfile({...profile, business_name: e.target.value})}
-                  className="w-full px-4 py-2 rounded-xl border focus:outline-primary text-sm" />
+                <label className="block text-xs font-bold mb-1">Website (Optional)</label>
+                <input type="url" value={profile.website} onChange={(e) => setProfile({...profile, website: e.target.value})}
+                  className="w-full px-4 py-2 rounded-xl border focus:outline-primary text-sm" placeholder="https://" />
               </div>
               
               <div>
-                <label className="block text-xs font-bold mb-1">Business Type</label>
-                <select value={profile.business_type} onChange={(e) => setProfile({...profile, business_type: e.target.value})}
-                  className="w-full px-4 py-2 rounded-xl border focus:outline-primary text-sm">
-                  <option value="">Select business type</option>
-                  <option value="Cafe/Restaurant">Cafe/Restaurant</option>
-                  <option value="Retail">Retail</option>
-                  <option value="Event Management">Event Management</option>
-                  <option value="Logistics">Logistics</option>
-                  <option value="Other">Other</option>
-                </select>
+                <label className="block text-xs font-bold mb-1">Company Description</label>
+                <textarea rows={2} value={profile.company_description} onChange={(e) => setProfile({...profile, company_description: e.target.value})}
+                  className="w-full px-4 py-2 rounded-xl border focus:outline-primary text-sm" placeholder="Briefly describe what your company does..." />
               </div>
-              
+
               <div>
-                <label className="block text-xs font-bold mb-1">Business Address</label>
-                <textarea rows={2} value={profile.business_address} onChange={(e) => setProfile({...profile, business_address: e.target.value})}
+                <label className="block text-xs font-bold mb-1">Street Address</label>
+                <textarea rows={2} value={profile.company_address} onChange={(e) => setProfile({...profile, company_address: e.target.value})}
                   className="w-full px-4 py-2 rounded-xl border focus:outline-primary text-sm" placeholder="Full business address" />
+              </div>
+              
+              <div className="grid grid-cols-3 gap-4">
+                <div>
+                  <label className="block text-xs font-bold mb-1">City</label>
+                  <input type="text" value={profile.city} onChange={(e) => setProfile({...profile, city: e.target.value})}
+                    className="w-full px-4 py-2 rounded-xl border focus:outline-primary text-sm" placeholder="e.g. Kota Kinabalu" />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold mb-1">State</label>
+                  <select value={profile.state} onChange={(e) => setProfile({...profile, state: e.target.value})}
+                    className="w-full px-4 py-2 rounded-xl border focus:outline-primary text-sm">
+                    <option value="">Select State</option>
+                    <option value="Sabah">Sabah</option>
+                    <option value="Sarawak">Sarawak</option>
+                    <option value="Kuala Lumpur">Kuala Lumpur</option>
+                    <option value="Selangor">Selangor</option>
+                    <option value="Johor">Johor</option>
+                    <option value="Penang">Penang</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-bold mb-1">Postal Code</label>
+                  <input type="text" value={profile.postal_code} onChange={(e) => setProfile({...profile, postal_code: e.target.value})}
+                    className="w-full px-4 py-2 rounded-xl border focus:outline-primary text-sm" placeholder="e.g. 88400" />
+                </div>
               </div>
             </div>
           </div>
