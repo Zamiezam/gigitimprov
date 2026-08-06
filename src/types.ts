@@ -133,3 +133,9 @@ export interface WorkerProfile extends Profile {
   emergency_ready?: boolean;
   emergency_radius_km?: number;
 }
+
+// Additional Worker Profile Fields for Income Classification
+export interface IncomeClassification {
+  household_income?: number;
+  income_group?: 'B40' | 'M40' | 'T20';
+}

@@ -41,6 +41,17 @@ export default function LoginPage({ onClose, defaultRole = 'worker', onLoginSucc
   const [commitments, setCommitments] = useState('');
   const [emergencyReady, setEmergencyReady] = useState(false);
   const [emergencyRadius, setEmergencyRadius] = useState('5');
+  const [householdIncome, setHouseholdIncome] = useState('');
+  
+  // B40/M40/T20 auto-classification based on DOSM thresholds
+  const getIncomeClassification = (income: string): { label: string; color: string; bg: string } | null => {
+    if (!income) return null;
+    const val = parseInt(income);
+    if (val <= 4850) return { label: 'B40', color: 'text-blue-700', bg: 'bg-blue-100 border-blue-300' };
+    if (val <= 10970) return { label: 'M40', color: 'text-emerald-700', bg: 'bg-emerald-100 border-emerald-300' };
+    return { label: 'T20', color: 'text-amber-700', bg: 'bg-amber-100 border-amber-300' };
+  };
+  const incomeClass = getIncomeClassification(householdIncome);
   
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -81,6 +92,8 @@ export default function LoginPage({ onClose, defaultRole = 'worker', onLoginSucc
           bank_name: bankName,
           bank_account_number: bankAccountNumber,
           expected_hourly_rate: expectedRate ? parseFloat(expectedRate) : null,
+          household_income: householdIncome ? parseInt(householdIncome) : null,
+          income_classification: incomeClass?.label || null,
           commitments_description: commitments,
           emergency_ready: emergencyReady,
           emergency_radius_km: emergencyRadius ? parseInt(emergencyRadius) : null
@@ -242,6 +255,36 @@ export default function LoginPage({ onClose, defaultRole = 'worker', onLoginSucc
                           <input type="number" min="0" step="0.5" required value={expectedRate} onChange={(e) => setExpectedRate(e.target.value)} className="w-full pl-10 pr-4 py-2 rounded-xl border border-outline-variant focus:outline-primary text-sm" placeholder="e.g. 15.00" />
                         </div>
                       </div>
+
+                      <div>
+                        <label className="block text-xs font-bold text-on-surface-variant mb-1">Monthly Household Income (RM)</label>
+                        <div className="relative">
+                          <CircleDollarSign size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant" />
+                          <select required value={householdIncome} onChange={(e) => setHouseholdIncome(e.target.value)} className="w-full pl-10 pr-4 py-2 rounded-xl border border-outline-variant focus:outline-primary text-sm bg-white">
+                            <option value="">Select income range</option>
+                            <option value="1500">Below RM 2,000</option>
+                            <option value="2500">RM 2,000 – RM 3,000</option>
+                            <option value="3500">RM 3,000 – RM 4,000</option>
+                            <option value="4500">RM 4,000 – RM 4,850</option>
+                            <option value="6000">RM 4,850 – RM 7,000</option>
+                            <option value="9000">RM 7,000 – RM 10,970</option>
+                            <option value="12000">RM 10,970 – RM 15,000</option>
+                            <option value="20000">Above RM 15,000</option>
+                          </select>
+                        </div>
+                      </div>
+
+                      {incomeClass && (
+                        <div className={`flex items-center gap-2 px-3 py-2 rounded-xl border ${incomeClass.bg}`}>
+                          <span className={`text-xs font-bold ${incomeClass.color}`}>Auto-classified:</span>
+                          <span className={`text-sm font-extrabold ${incomeClass.color}`}>{incomeClass.label}</span>
+                          <span className={`text-xs ${incomeClass.color} opacity-70`}>
+                            {incomeClass.label === 'B40' && '(Bottom 40% — eligible for subsidies & priority hiring)'}
+                            {incomeClass.label === 'M40' && '(Middle 40%)'}
+                            {incomeClass.label === 'T20' && '(Top 20%)'}
+                          </span>
+                        </div>
+                      )}
                     </div>
 
                     {/* Scheduling & Emergency Group */}
