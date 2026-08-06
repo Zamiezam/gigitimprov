@@ -71,11 +71,7 @@ export default function WorkerBrowseView({
   const [showMapOnMobile, setShowMapOnMobile] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
-  // ── Upwork Features State ────────────────────────────────────
-  const [savedGigIds, setSavedGigIds] = useState<Set<string>>(() => {
-    try { return new Set(JSON.parse(localStorage.getItem('gigit_saved_gigs') || '[]')); }
-    catch { return new Set(); }
-  });
+  const [savedGigIds, setSavedGigIds] = useState<Set<string>>(new Set());
   const [isAvailable, setIsAvailable] = useState<boolean>(() => {
     return localStorage.getItem('gigit_available') === 'true';
   });
@@ -135,28 +131,39 @@ export default function WorkerBrowseView({
     }
   }, [user]);
 
-  // ── Fetch applied gigs to sync status ──────
+  // ── Fetch applied and saved gigs ──────
   useEffect(() => {
     if (!user) return;
-    async function loadUserApps() {
+    async function loadUserAppsAndSaved() {
       try {
-        const { data, error } = await supabase
+        // Fetch applied gigs
+        const { data: appData, error: appError } = await supabase
           .from('applicants')
           .select('gig_id, status')
           .eq('worker_id', user.id);
         
-        if (!error && data) {
+        if (!appError && appData) {
           const syncState: Record<string, 'Applied' | 'Booked'> = {};
-          data.forEach(app => {
+          appData.forEach(app => {
             syncState[app.gig_id] = app.status === 'Hired' ? 'Booked' : 'Applied';
           });
           setUserGigs(syncState);
         }
+
+        // Fetch saved gigs
+        const { data: savedData, error: savedError } = await supabase
+          .from('saved_gigs')
+          .select('gig_id')
+          .eq('worker_id', user.id);
+        
+        if (!savedError && savedData) {
+          setSavedGigIds(new Set(savedData.map(s => s.gig_id)));
+        }
       } catch (err) {
-        console.error('Failed to sync applications', err);
+        console.error('Failed to sync applications or saved gigs', err);
       }
     }
-    loadUserApps();
+    loadUserAppsAndSaved();
   }, [user]);
 
   // ── Fetch real gigs from Supabase + Subscribe ──────
@@ -224,14 +231,10 @@ export default function WorkerBrowseView({
           }));
 
         setEarningsData({
-          availableBalance: cleared > 0 ? cleared : 480.00,
-          pendingRelease: pending > 0 ? pending : 132.00,
-          semesterTotal: total > 0 ? total : 2140.00,
-          history: historyList.length > 0 ? historyList : [
-            { title: 'Barista Assistant Shift', sub: 'Damai Bistro • May 28, 2026', amount: '+RM 72.00', status: 'Paid' },
-            { title: 'Event Assistant Crew',    sub: 'ICC KK Hall • May 14, 2026',  amount: '+RM 180.00', status: 'Paid' },
-            { title: 'Warehouse Logistics Sorting', sub: 'Sabah Logistic Depot • May 04, 2026', amount: '+RM 228.00', status: 'Paid' }
-          ]
+          availableBalance: cleared,
+          pendingRelease: pending,
+          semesterTotal: total,
+          history: historyList
         });
       }
     } catch (err) {
@@ -334,15 +337,37 @@ export default function WorkerBrowseView({
   };
 
   // ── Saved Gigs helpers ───────────────────────────────────────
-  const toggleSaveGig = useCallback((gigId: string) => {
+  const toggleSaveGig = useCallback(async (gigId: string) => {
+    if (!user) return;
+    
+    // Optimistic UI update
+    const isSaving = !savedGigIds.has(gigId);
     setSavedGigIds(prev => {
       const next = new Set(prev);
       if (next.has(gigId)) { next.delete(gigId); toast('Gig removed from saved list.'); }
       else { next.add(gigId); toast('📌 Gig saved! View in Saved Gigs tab.'); }
-      localStorage.setItem('gigit_saved_gigs', JSON.stringify([...next]));
       return next;
     });
-  }, []);
+
+    // DB Update
+    try {
+      if (isSaving) {
+        await supabase.from('saved_gigs').insert({ worker_id: user.id, gig_id: gigId });
+      } else {
+        await supabase.from('saved_gigs').delete().eq('worker_id', user.id).eq('gig_id', gigId);
+      }
+    } catch (err) {
+      console.error('Error saving gig:', err);
+      // Revert on error
+      setSavedGigIds(prev => {
+        const next = new Set(prev);
+        if (isSaving) next.delete(gigId);
+        else next.add(gigId);
+        return next;
+      });
+      toast('Failed to update saved gig.');
+    }
+  }, [user, savedGigIds]);
 
   // ── Availability toggle ──────────────────────────────────────
   const toggleAvailability = useCallback(async () => {
@@ -365,31 +390,32 @@ export default function WorkerBrowseView({
       {/* ── Top Header ──────────────────────────────────────── */}
       <header className="fixed top-0 left-0 w-full z-50 flex justify-between items-center px-4 md:px-8 h-16 bg-surface border-b border-outline-variant shadow-xs">
         <div className="flex items-center gap-2 cursor-pointer" onClick={() => onNavigate(AppView.Landing)}>
-          <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center text-white font-bold text-lg font-display">G</div>
-          <span className="font-display font-bold text-xl text-primary tracking-tight">GigIT</span>
+          <span className="font-display font-black text-2xl text-primary tracking-tight">SabahGig</span>
         </div>
 
-        <div className="hidden lg:flex items-center gap-6">
-          <button onClick={() => onNavigate(AppView.Landing)} className="text-on-surface-variant hover:text-primary transition-colors text-sm font-semibold tracking-wide cursor-pointer">Kota / Home</button>
-          <button onClick={() => { setActiveTab('Dashboard'); onNavigate(AppView.WorkerBrowse); }} className="text-primary font-bold border-b-2 border-primary py-1 text-sm tracking-wide cursor-pointer">Find Opportunities</button>
-          <button onClick={() => onNavigate(AppView.EmployerDashboard)} className="text-on-surface-variant hover:text-primary transition-colors text-sm font-semibold tracking-wide cursor-pointer">Hire Trusted Talent</button>
-          <button onClick={() => { setActiveTab('Reliability'); onNavigate(AppView.WorkerBrowse); }} className="text-on-surface-variant hover:text-primary transition-colors text-sm font-semibold tracking-wide cursor-pointer">Trust Dashboard</button>
+        <div className="hidden lg:flex items-center gap-8">
+          <button onClick={() => { setActiveTab('Dashboard'); onNavigate(AppView.WorkerBrowse); }} className={`font-semibold border-b-2 py-1 text-sm tracking-wide cursor-pointer transition-colors ${activeTab !== 'Reliability' ? 'text-primary border-primary' : 'text-on-surface-variant border-transparent hover:text-primary'}`}>Explore Gigs</button>
+          <button onClick={() => { setActiveTab('Reliability'); onNavigate(AppView.WorkerBrowse); }} className={`font-semibold border-b-2 py-1 text-sm tracking-wide cursor-pointer transition-colors ${activeTab === 'Reliability' ? 'text-primary border-primary' : 'text-on-surface-variant border-transparent hover:text-primary'}`}>Worker Portal</button>
         </div>
 
         <div className="flex items-center gap-4">
           <button
-            onClick={onLogout || logOut}
-            className="hidden md:block border border-primary text-primary hover:bg-primary/5 py-1.5 px-5 rounded-full font-semibold transition-all active:scale-95 cursor-pointer text-sm"
+            onClick={() => onSwitchToEmployer ? onSwitchToEmployer() : onNavigate(AppView.EmployerDashboard)}
+            className="hidden md:block border border-primary text-primary hover:bg-primary/5 py-1.5 px-4 rounded-full font-bold transition-all active:scale-95 cursor-pointer text-xs"
           >
-            Logout
+            Switch to Employer
           </button>
-          <div className="flex gap-2">
+          <div className="flex gap-2 items-center">
             <button className="p-2 hover:bg-surface-container-low rounded-full transition-colors relative cursor-pointer">
               <span className="absolute top-1 right-1 w-2.5 h-2.5 bg-secondary rounded-full" />
               <Bell size={20} className="text-on-surface-variant" />
             </button>
-            <button onClick={() => setActiveTab('Profile')} className="p-2 hover:bg-surface-container-low rounded-full transition-colors cursor-pointer">
-              <User size={20} className="text-on-surface-variant" />
+            <button onClick={() => setActiveTab('Profile')} className="p-0.5 hover:bg-surface-container-low rounded-full transition-colors cursor-pointer ml-1">
+              <img
+                alt="Worker profile"
+                className="w-8 h-8 rounded-full border border-outline-variant object-cover"
+                src={workerAvatar}
+              />
             </button>
           </div>
         </div>
@@ -399,45 +425,38 @@ export default function WorkerBrowseView({
       <div className="flex pt-16">
 
         {/* ── Left Sidebar ───────────────────────────────────── */}
-        <aside className="hidden md:flex flex-col h-[calc(100vh-64px)] fixed left-0 top-16 w-64 py-6 bg-surface-container-lowest border-r border-outline-variant shadow-xs overflow-y-auto">
+        <aside className="hidden md:flex flex-col h-[calc(100vh-64px)] fixed left-0 top-16 w-64 py-6 bg-white border-r border-outline-variant shadow-xs overflow-y-auto z-40">
 
           {/* Profile + reliability */}
           <div className="px-6 mb-6">
             <div
-              className="flex items-center gap-3 mb-4 cursor-pointer hover:bg-surface-container-low p-2 rounded-xl transition-colors"
+              className="flex items-center gap-3 mb-4 cursor-pointer hover:bg-surface-container-low p-2 rounded-xl transition-colors -ml-2"
               onClick={() => setActiveTab('Profile')}
             >
               <img
                 alt="Worker profile"
-                className="w-12 h-12 rounded-full border-2 border-primary-container object-cover shadow-xs"
+                className="w-12 h-12 rounded-full border-2 border-primary-container object-cover shadow-sm"
                 src={workerAvatar}
               />
               <div>
-                <p className="font-semibold text-sm text-on-surface truncate max-w-[130px]">{workerName}</p>
-                <p className="text-[11px] text-on-surface-variant font-medium flex items-center gap-2">
-                  {profile?.is_verified ? 'Verified Student' : 'Unverified Account'}
-                  {profile?.income_classification && (
-                    <span className="bg-primary/10 text-primary px-1.5 py-0.5 rounded font-bold text-[9px]">
-                      {profile.income_classification}
-                    </span>
-                  )}
+                <p className="font-bold text-sm text-on-surface truncate max-w-[130px]">{workerName}</p>
+                <p className="text-[10px] text-on-surface-variant font-medium flex items-center gap-1 mt-0.5">
+                  Verified Sabah Worker
                 </p>
               </div>
             </div>
 
-            <div className="bg-secondary/5 p-4 rounded-xl border border-secondary/20">
+            <div className="bg-amber-50 p-4 rounded-xl border border-amber-100">
               <div className="flex justify-between items-center mb-1.5">
-                <span className="text-[11px] text-secondary font-bold uppercase tracking-wider">SWEAT™️ Score</span>
-                <span className="text-sm font-bold text-secondary flex items-center gap-0.5">
-                  <Award size={14} fill="currentColor" />4.8
-                </span>
+                <span className="text-[11px] text-amber-900 font-bold uppercase tracking-wider">Reliability Score</span>
+                <span className="text-sm font-black text-amber-900">4.8</span>
               </div>
-              <div className="w-full bg-outline-variant h-1.5 rounded-full overflow-hidden">
-                <div className="bg-secondary h-full rounded-full" style={{ width: '92%' }} />
+              <div className="w-full bg-amber-200 h-1.5 rounded-full overflow-hidden">
+                <div className="bg-amber-600 h-full rounded-full" style={{ width: '96%' }} />
               </div>
-              <div className="flex gap-1 mt-2.5">
-                <span className="text-[9px] bg-tertiary-container/25 text-on-tertiary-container px-2 py-0.5 rounded-full font-bold">Punctual</span>
-                <span className="text-[9px] bg-tertiary-container/25 text-on-tertiary-container px-2 py-0.5 rounded-full font-bold">Hardworking</span>
+              <div className="flex gap-1.5 mt-3">
+                <span className="text-[9px] bg-green-500 text-white px-2.5 py-0.5 rounded-full font-bold">Punctual</span>
+                <span className="text-[9px] bg-green-500 text-white px-2.5 py-0.5 rounded-full font-bold">Hardworking</span>
               </div>
             </div>
           </div>
@@ -450,81 +469,79 @@ export default function WorkerBrowseView({
           </div>
 
           {/* Nav links */}
-          <nav className="flex-1 space-y-1">
+          <nav className="flex-1 space-y-1 mb-6">
             {[
               { id: 'Dashboard',      icon: 'dashboard',      label: 'Dashboard'      },
-              { id: 'MyApplications', icon: 'list_alt',       label: 'My Gigs/Apps'   },
-              { id: 'SavedGigs',      icon: 'bookmarks',      label: `Saved Opportunities (${savedGigIds.size})`  },
-              { id: 'Messages',       icon: 'chat',           label: 'Messages'       },
-              { id: 'Reliability',    icon: 'verified_user',  label: 'Trust Dashboard' },
+              { id: 'MyApplications', icon: 'work',           label: 'Active Gigs'    },
               { id: 'Earnings',       icon: 'payments',       label: 'Earnings'       },
-              { id: 'Profile',        icon: 'person',         label: 'My Profile'     },
               { id: 'Support',        icon: 'support_agent',  label: 'Support'        },
             ].map(({ id, icon, label }) => (
               <a
                 key={id}
                 href="#"
                 onClick={e => { e.preventDefault(); setActiveTab(id); }}
-                className={`flex items-center gap-3 px-6 py-3 mx-2 rounded-xl text-sm ${
+                className={`flex items-center gap-3 px-6 py-3.5 mx-2 rounded-xl text-sm font-bold transition-all ${
                   activeTab === id
-                    ? 'bg-primary text-white font-bold shadow-xs'
-                    : 'text-on-surface-variant hover:bg-surface-container-low transition-all'
+                    ? 'bg-primary text-white shadow-md'
+                    : 'text-on-surface-variant hover:bg-surface-container-low'
                 }`}
               >
-                <span className="material-symbols-outlined text-lg">{icon}</span>
+                <span className="material-symbols-outlined text-[20px]">{icon}</span>
                 <span>{label}</span>
               </a>
             ))}
           </nav>
 
           {/* Clock-in widget connected to Supabase */}
-          <div className="px-6 mt-auto pb-4">
-            {activeShift ? (
-              <ClockInOut 
-                gigTitle={activeShift.gig_title}
-                gigLocation={activeShift.employer_name || 'KK Cafe'}
-                key={activeShift.id}
-                onClockIn={async (time) => {
-                  try {
-                    await supabase
-                      .from('hired_workers')
-                      .update({ 
-                        clock_in_time: time.toISOString(),
-                        updated_at: new Date().toISOString()
-                      })
-                      .eq('id', activeShift.id);
-                    toast(`Clocked in! Have a great shift at ${activeShift.gig_title}! 🎉`);
-                    fetchActiveShift();
-                  } catch (err) {
-                    console.error(err);
-                  }
-                }}
-                onClockOut={async (time, duration) => {
-                  try {
-                    await supabase
-                      .from('hired_workers')
-                      .update({ 
-                        clock_out_time: time.toISOString(),
-                        status: 'completed',
-                        updated_at: new Date().toISOString()
-                      })
-                      .eq('id', activeShift.id);
-                    toast(`Clocked out! Shift duration: ${duration.toFixed(2)} hours. Payment cleared. 💸`);
-                    fetchActiveShift();
-                  } catch (err) {
-                    console.error(err);
-                  }
-                }}
-              />
-            ) : (
-              <div className="bg-white rounded-xl border border-outline-variant p-4 text-center">
-                <Clock size={16} className="text-on-surface-variant mx-auto mb-2" />
-                <p className="text-xs font-bold text-on-surface">No Active Shifts</p>
-                <p className="text-[10px] text-on-surface-variant mt-1 leading-normal">
-                  Approved shift cards will allow you to clock in dynamically.
-                </p>
-              </div>
-            )}
+          <div className="px-6 mt-auto pb-6">
+            <div className="bg-surface-container-low rounded-xl border border-outline-variant p-4">
+              {activeShift ? (
+                <>
+                  <p className="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider mb-2">Current Shift</p>
+                  <p className="text-sm font-bold text-on-surface mb-1 truncate">{activeShift.gig_title}</p>
+                  <p className="text-xs text-primary font-bold mb-3 truncate">{activeShift.employer_name || 'Local SME'}</p>
+                  <ClockInOut 
+                    gigTitle={activeShift.gig_title}
+                    gigLocation={activeShift.employer_name || 'KK Cafe'}
+                    key={activeShift.id}
+                    onClockIn={async (time) => {
+                      try {
+                        await supabase.from('hired_workers').update({ clock_in_time: time.toISOString(), updated_at: new Date().toISOString() }).eq('id', activeShift.id);
+                        toast(`Clocked in! Have a great shift at ${activeShift.gig_title}! 🎉`);
+                        fetchActiveShift();
+                      } catch (err) { console.error(err); }
+                    }}
+                    onClockOut={async (time, duration) => {
+                      try {
+                        await supabase.from('hired_workers').update({ clock_out_time: time.toISOString(), status: 'completed', updated_at: new Date().toISOString() }).eq('id', activeShift.id);
+                        toast(`Clocked out! Shift duration: ${duration.toFixed(2)} hours. Payment cleared. 💸`);
+                        fetchActiveShift();
+                      } catch (err) { console.error(err); }
+                    }}
+                  />
+                </>
+              ) : (
+                <>
+                  <p className="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider mb-2">Next Shift</p>
+                  <p className="text-xs font-semibold text-on-surface mb-1">No upcoming shifts</p>
+                  <p className="text-xs font-bold text-primary mb-3">Find gigs to book</p>
+                  <button className="w-full bg-primary text-white font-bold py-2 rounded-lg text-sm opacity-50 cursor-not-allowed">
+                    Clock In
+                  </button>
+                </>
+              )}
+            </div>
+          </div>
+
+          <div className="px-6 pb-6 space-y-1">
+            <button onClick={() => setActiveTab('Profile')} className="w-full flex items-center gap-3 p-2.5 text-on-surface-variant hover:text-primary transition-colors text-left text-xs font-bold">
+              <span className="material-symbols-outlined text-[18px]">settings</span>
+              <span>Settings</span>
+            </button>
+            <button onClick={onLogout || logOut} className="w-full flex items-center gap-3 p-2.5 text-on-surface-variant hover:text-error transition-colors text-left text-xs font-bold">
+              <span className="material-symbols-outlined text-[18px]">logout</span>
+              <span>Logout</span>
+            </button>
           </div>
         </aside>
 

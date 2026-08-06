@@ -22,23 +22,6 @@ export default function DirectMessaging({ initialPartnerId, initialPartnerName }
   const [sending, setSending] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  // Mock conversations for demo
-  const mockConvos = [
-    { partner_id: 'mock-1', partner_name: 'Damai Bistro', partner_avatar: '', last_message: 'Are you available this Saturday?', last_message_time: new Date(Date.now() - 3600000).toISOString() },
-    { partner_id: 'mock-2', partner_name: 'ICC KK Events', partner_avatar: '', last_message: 'Great work last time! We have another event.', last_message_time: new Date(Date.now() - 86400000).toISOString() },
-  ];
-
-  const mockMessages: Record<string, Message[]> = {
-    'mock-1': [
-      { id: '1', sender_id: 'mock-1', receiver_id: user?.id ?? '', content: 'Hi! Are you available this Saturday for a barista shift?', created_at: new Date(Date.now() - 7200000).toISOString() },
-      { id: '2', sender_id: user?.id ?? '', receiver_id: 'mock-1', content: 'Yes, I am! What time does the shift start?', created_at: new Date(Date.now() - 5400000).toISOString() },
-      { id: '3', sender_id: 'mock-1', receiver_id: user?.id ?? '', content: 'Great! 9 AM to 3 PM. Rate is RM12/hour.', created_at: new Date(Date.now() - 3600000).toISOString() },
-    ],
-    'mock-2': [
-      { id: '4', sender_id: 'mock-2', receiver_id: user?.id ?? '', content: 'Great work last time! We have another event coming up.', created_at: new Date(Date.now() - 86400000).toISOString() },
-    ],
-  };
-
   useEffect(() => {
     if (user) loadConversations();
   }, [user]);
@@ -55,9 +38,9 @@ export default function DirectMessaging({ initialPartnerId, initialPartnerName }
     setLoading(true);
     try {
       const data = await api.getConversations(user!.id);
-      setConversations(data.length > 0 ? data : mockConvos);
+      setConversations(data.length > 0 ? data : []);
     } catch {
-      setConversations(mockConvos);
+      setConversations([]);
     } finally {
       setLoading(false);
     }
@@ -70,11 +53,10 @@ export default function DirectMessaging({ initialPartnerId, initialPartnerName }
       if (data.length > 0) {
         setMessages(data);
       } else {
-        // Use mock data for demo
-        setMessages(mockMessages[activeConvo.id] ?? []);
+        setMessages([]);
       }
     } catch {
-      setMessages(mockMessages[activeConvo.id] ?? []);
+      setMessages([]);
     }
   };
 

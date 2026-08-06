@@ -18,7 +18,11 @@ import {
   Shield,
   Lightbulb,
   X,
-  Loader2
+  Loader2,
+  Globe,
+  Bell,
+  CheckCircle,
+  CheckCircle2
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
@@ -41,14 +45,16 @@ export default function WorkerReliabilityView({ onNavigate, isEmbedded = false }
   const [reliabilityScore, setReliabilityScore] = useState('5.0');
   const [attendanceRate, setAttendanceRate] = useState(100);
 
-  // Simulator states
+  // SWEAT Pillars
+  const [sweatSkills, setSweatSkills] = useState(5.0);
+  const [sweatWorkEthic, setSweatWorkEthic] = useState(5.0);
+  const [sweatExperience, setSweatExperience] = useState(1.0);
+  const [sweatAttendance, setSweatAttendance] = useState(5.0);
+  const [sweatTrust, setSweatTrust] = useState(5.0);
+
+  // States
   const [isBackupReady, setIsBackupReady] = useState(true);
   const [showToastMessage, setShowToastMessage] = useState<string | null>(null);
-  const [showSimulator, setShowSimulator] = useState(false);
-  const [simSME, setSimSME] = useState('Damai Bistro');
-  const [simRating, setSimRating] = useState(5);
-  const [simComment, setSimComment] = useState('Excellent work ethic, arrived early and took charge immediately!');
-  const [isAnalyzing, setIsAnalyzing] = useState(false);
 
   useEffect(() => {
     if (user) {
@@ -96,107 +102,50 @@ export default function WorkerReliabilityView({ onNavigate, isEmbedded = false }
         const rate = totalAttempts > 0 ? Math.round((completed / totalAttempts) * 100) : 100;
         setAttendanceRate(rate);
 
-        // Compute reliability score
-        if (ratedHistory.length > 0) {
-          const totalRating = ratedHistory.reduce((sum, item) => sum + (item.rating || 0), 0);
-          const avgRating = totalRating / ratedHistory.length;
-          // Apply a small penalty for no-shows
-          const score = Math.max(1.0, Math.min(5.0, avgRating - (noShows * 0.5))).toFixed(1);
-          setReliabilityScore(score);
-        } else {
-          setReliabilityScore('5.0'); // Base starting score
-        }
+        // Calculate SWEAT pillars
+        let skillsSum = 0;
+        let workEthicSum = 0;
+        let trustSum = 0;
+        let validRatedCount = 0;
+        
+        ratedHistory.forEach(item => {
+          if (item.sweat_metrics) {
+            skillsSum += item.sweat_metrics.skills || item.rating || 5;
+            workEthicSum += item.sweat_metrics.work_ethic || item.rating || 5;
+            trustSum += item.sweat_metrics.trust || item.rating || 5;
+            validRatedCount++;
+          } else if (item.rating) {
+            skillsSum += item.rating;
+            workEthicSum += item.rating;
+            trustSum += item.rating;
+            validRatedCount++;
+          }
+        });
+
+        const avgSkills = validRatedCount > 0 ? (skillsSum / validRatedCount) : 5.0;
+        const avgWorkEthic = validRatedCount > 0 ? (workEthicSum / validRatedCount) : 5.0;
+        const avgTrust = validRatedCount > 0 ? (trustSum / validRatedCount) : 5.0;
+        
+        // Experience: 1.0 base, +0.5 for every 2 gigs, capped at 5.0
+        const experienceScore = Math.min(5.0, 1.0 + (completed * 0.25)); 
+        
+        // Attendance: Maps 0-100% directly to 0-5 scale
+        const attendanceScore = rate / 20.0;
+        
+        setSweatSkills(avgSkills);
+        setSweatWorkEthic(avgWorkEthic);
+        setSweatExperience(experienceScore);
+        setSweatAttendance(attendanceScore);
+        setSweatTrust(avgTrust);
+
+        // Overall SWEAT score
+        const overall = (avgSkills + avgWorkEthic + experienceScore + attendanceScore + avgTrust) / 5;
+        setReliabilityScore(overall.toFixed(1));
       }
     } catch (err) {
       console.error('Error loading reliability profile:', err);
     } finally {
       setLoadingProfile(false);
-    }
-  };
-
-  const handleAddReview = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!user) return;
-    setIsAnalyzing(true);
-    
-    try {
-      // 1. Send the text to Gemini AI for sentiment / reliability modifier
-      const aiAnalysis = await submitGigReviewWithAI(simRating, simComment);
-      
-      // Calculate amount based on rating
-      const rateAmount = simRating * 12;
-
-      // 2. Add the review to Supabase hired_workers
-      const { error: insertErr } = await supabase
-        .from('hired_workers')
-        .insert({
-          worker_id: user.id,
-          worker_name: profile?.full_name || user.email?.split('@')[0] || 'Student Worker',
-          worker_avatar: profile?.avatar_url || 'https://randomuser.me/api/portraits/men/32.jpg',
-          employer_id: 'employer-id-placeholder', // Mock business ID
-          employer_name: simSME,
-          gig_title: `${simSME} Support Crew`,
-          amount: rateAmount,
-          status: 'verified',
-          payment_status: 'paid',
-          rating_given: true,
-          rating: simRating,
-          review: simComment,
-          clock_in_time: new Date(Date.now() - 4 * 3600 * 1000).toISOString(),
-          clock_out_time: new Date().toISOString(),
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        });
-
-      if (insertErr) throw insertErr;
-
-      // 3. Reload stats from DB
-      await loadProfileAndStats();
-
-      setShowSimulator(false);
-      
-      // 4. Show conclusion in toast
-      const scoreModifier = aiAnalysis.modifier > 0 ? `+${aiAnalysis.modifier}` : aiAnalysis.modifier;
-      showToast(`✨ Gemini AI processed review from ${simSME}. Reliability modifier: ${scoreModifier}. Scorecard updated!`);
-      
-    } catch (error) {
-      console.error("AI Analysis / Review submit failed:", error);
-      showToast("Failed to submit review. Review simulated locally.");
-    } finally {
-      setIsAnalyzing(false);
-    }
-  };
-  
-  const handleSimulateNoShow = async () => {
-    if (!user) return;
-    try {
-      // Insert a negative review record to simulate a no-show
-      const { error } = await supabase
-        .from('hired_workers')
-        .insert({
-          worker_id: user.id,
-          worker_name: profile?.full_name || 'Student Worker',
-          worker_avatar: profile?.avatar_url || 'https://randomuser.me/api/portraits/men/32.jpg',
-          employer_id: 'employer-id-placeholder',
-          employer_name: 'Damai Bistro',
-          gig_title: 'Server Shift',
-          amount: 0,
-          status: 'verified',
-          payment_status: 'pending',
-          rating_given: true,
-          rating: 1,
-          review: 'No-show incident reported. Worker did not arrive for the shift.',
-          clock_in_time: null,
-          clock_out_time: null,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        });
-
-      if (error) throw error;
-      await loadProfileAndStats();
-      showToast(`⚠️ Simulated cancellation! Penalty applied. SWEAT™️ Trust Score updated.`);
-    } catch (err) {
-      console.error('Failed to simulate no-show:', err);
     }
   };
 
@@ -221,411 +170,261 @@ export default function WorkerReliabilityView({ onNavigate, isEmbedded = false }
   const workerUniversity = profile?.university || 'University Student';
 
   return (
-    <div className={isEmbedded ? "bg-transparent text-on-surface font-sans" : "bg-background min-h-screen text-on-surface font-sans selection:bg-primary-container selection:text-on-primary-container"}>
+    <div className={isEmbedded ? "bg-transparent text-on-surface font-sans" : "bg-surface-container-lowest min-h-screen text-on-surface font-sans selection:bg-primary-container selection:text-on-primary-container flex flex-col md:flex-row"}>
       
       {/* Top Navigation Row (Only render if NOT embedded) */}
       {!isEmbedded && (
         <header className="fixed top-0 left-0 w-full z-50 flex justify-between items-center px-4 md:px-8 h-16 bg-surface border-b border-outline-variant shadow-xs">
           <div className="flex items-center gap-2 cursor-pointer" onClick={() => onNavigate(AppView.Landing)}>
-            <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center text-white font-bold text-lg font-display">G</div>
-            <span className="font-display font-bold text-xl text-primary tracking-tight">GigIT</span>
+            <span className="font-display font-black text-2xl text-primary tracking-tight">SabahGig</span>
           </div>
 
-          <div className="hidden lg:flex items-center gap-6">
-            <button onClick={() => onNavigate(AppView.WorkerBrowse)} className="text-on-surface-variant hover:text-primary transition-colors text-sm font-semibold tracking-wide cursor-pointer">Find Opportunities</button>
-            <button onClick={() => onNavigate(AppView.WorkerReliability)} className="text-primary font-bold border-b-2 border-primary py-1 text-sm tracking-wide cursor-pointer">Trust Dashboard</button>
+          <div className="hidden lg:flex items-center gap-8">
+            <button onClick={() => onNavigate(AppView.WorkerBrowse)} className={`font-semibold border-b-2 py-1 text-sm tracking-wide cursor-pointer transition-colors text-on-surface-variant border-transparent hover:text-primary`}>Explore Gigs</button>
+            <button onClick={() => {}} className={`font-semibold border-b-2 py-1 text-sm tracking-wide cursor-pointer transition-colors text-primary border-primary`}>Worker Portal</button>
           </div>
 
           <div className="flex items-center gap-4">
-            <div className="w-8 h-8 rounded-full bg-secondary flex items-center justify-center text-white font-bold cursor-pointer">
-              {workerName.charAt(0).toUpperCase()}
+            <div className="flex gap-2 items-center">
+              <button className="p-2 hover:bg-surface-container-low rounded-full transition-colors relative cursor-pointer">
+                <span className="absolute top-1 right-1 w-2.5 h-2.5 bg-secondary rounded-full" />
+                <Bell size={20} className="text-on-surface-variant" />
+              </button>
+              <button className="p-0.5 hover:bg-surface-container-low rounded-full transition-colors cursor-pointer ml-1">
+                <img
+                  alt="Worker profile"
+                  className="w-8 h-8 rounded-full border border-outline-variant object-cover"
+                  src={workerAvatar}
+                />
+              </button>
             </div>
           </div>
         </header>
       )}
 
-      <main className={isEmbedded ? "space-y-8 pt-2 pb-16" : "pt-24 px-4 md:px-8 pb-24 max-w-7xl mx-auto space-y-8"}>
-        
-        {/* Success Alert Toast Notification */}
-        <AnimatePresence>
-          {showToastMessage && (
-            <motion.div 
-              initial={{ opacity: 0, y: -20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
-              className="bg-primary text-white p-4 rounded-xl shadow-lg flex items-center justify-between border border-primary-container z-50 fixed top-20 right-4 max-w-sm"
-            >
-              <div className="flex items-center gap-1.5">
-                <ShieldCheck size={18} className="text-white bg-white/20 p-px rounded-full" />
-                <p className="text-xs font-semibold leading-normal">{showToastMessage}</p>
-              </div>
-              <button onClick={() => setShowToastMessage(null)} className="text-white/80 hover:text-white pl-3">
-                <X size={14} />
+      {/* Left Sidebar */}
+      {!isEmbedded && (
+        <aside className="hidden md:flex flex-col h-[calc(100vh-64px)] fixed left-0 top-16 w-64 py-8 bg-white border-r border-outline-variant shadow-xs overflow-y-auto z-40">
+          <div className="px-6 mb-8">
+            <h2 className="font-display font-black text-xl text-primary">Worker Portal</h2>
+            <p className="text-[11px] text-on-surface-variant font-medium mt-1">Verified Sabah Worker</p>
+          </div>
+
+          <nav className="flex-1 space-y-1 mb-6">
+            {[
+              { id: 'Dashboard',      icon: 'dashboard',      label: 'Dashboard'      },
+              { id: 'MyReliability',  icon: 'verified_user',  label: 'My Reliability' },
+              { id: 'ActiveGigs',     icon: 'work',           label: 'Active Gigs'    },
+              { id: 'Earnings',       icon: 'payments',       label: 'Earnings'       },
+            ].map(({ id, icon, label }) => (
+              <button
+                key={id}
+                onClick={() => { if (id === 'Dashboard') onNavigate(AppView.WorkerBrowse); }}
+                className={`w-full flex items-center gap-3 px-6 py-3.5 mx-2 rounded-xl text-sm font-bold transition-all ${
+                  id === 'MyReliability'
+                    ? 'bg-primary text-white shadow-md'
+                    : 'text-on-surface-variant hover:bg-surface-container-low'
+                }`}
+              >
+                <span className="material-symbols-outlined text-[20px]">{icon}</span>
+                <span>{label}</span>
               </button>
-            </motion.div>
-          )}
-        </AnimatePresence>
+            ))}
+          </nav>
 
-        {/* Profile Hero Header */}
-        <div className="bg-white p-6 md:p-8 rounded-3xl border border-outline-variant flex flex-col md:flex-row items-center gap-6 justify-between shadow-xs">
-          <div className="flex flex-col md:flex-row items-center gap-5 text-center md:text-left">
-            <div className="relative w-20 h-20 rounded-2xl overflow-hidden border-2 border-primary shadow-sm bg-outline-variant">
-              <img 
-                alt={workerName} 
-                className="w-full h-full object-cover" 
-                src={workerAvatar} 
-              />
-              <span className="absolute bottom-1 right-1 w-3.5 h-3.5 bg-tertiary rounded-full border-2 border-white"></span>
-            </div>
-            <div className="space-y-1">
-              <div className="flex flex-wrap items-center justify-center md:justify-start gap-2">
-                <h1 className="font-display font-semibold text-xl text-on-surface">{workerName}</h1>
-                <span className="bg-primary/10 text-primary-container font-semibold text-[10px] px-2.5 py-0.5 rounded-full uppercase flex items-center gap-1 shadow-xs">
-                  <ShieldCheck size={12} />
-                  {profile?.is_verified ? 'Verified Student' : 'Unverified Account'}
-                </span>
-              </div>
-              <p className="text-xs text-on-surface-variant font-medium flex items-center justify-center md:justify-start gap-1">
-                <MapPin size={13} className="text-primary" />
-                {workerUniversity} • Sabah, Malaysia
-              </p>
-            </div>
-          </div>
-          <div className="flex flex-wrap gap-2.5 w-full sm:w-auto justify-center md:justify-end">
-            <button 
-              onClick={() => setShowSimulator(true)}
-              className="bg-primary hover:bg-primary/95 text-white text-xs font-bold py-2.5 px-5 rounded-xl shadow-xs transition-all cursor-pointer flex items-center gap-1.5 active:scale-95 text-center"
-              id="request-endorsement-btn"
-            >
-              <Plus size={14} />
-              <span>Request SME Endorsement</span>
+          <div className="px-6 mt-auto space-y-1">
+            <button className="w-full flex items-center gap-3 p-2.5 text-on-surface-variant hover:text-primary transition-colors text-left text-xs font-bold">
+              <span className="material-symbols-outlined text-[18px]">settings</span>
+              <span>Settings</span>
             </button>
-            <button 
-              onClick={() => {
-                showToast("Attendance Policy loaded! Perfect records secure your priority placement in instant gigs.");
-              }} 
-              className="border border-outline text-on-surface hover:bg-surface-container-low font-bold text-xs py-2.5 px-4 rounded-xl transition-colors cursor-pointer bg-white"
-              id="view-rules-btn"
-            >
-              Verify Attendance Rules
+            <button className="w-full flex items-center gap-3 p-2.5 text-on-surface-variant hover:text-error transition-colors text-left text-xs font-bold">
+              <span className="material-symbols-outlined text-[18px]">logout</span>
+              <span>Logout</span>
             </button>
           </div>
-        </div>
+        </aside>
+      )}
 
-        {/* Demo Controller Widget */}
-        <div className="fixed bottom-20 right-4 z-40 md:bottom-6 md:right-6">
-          <DemoControlPanel 
-            onSimulateReview={() => setShowSimulator(true)}
-            onSimulateNoShow={handleSimulateNoShow} 
-          />
-        </div>
-
-        {/* Reliability stats cards grid */}
-        <section className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+      {/* Main Content Area */}
+      <main className={`flex-1 ${isEmbedded ? '' : 'md:ml-64 pt-24 px-6 md:px-10 pb-20'}`}>
+        <div className="max-w-5xl mx-auto space-y-6">
           
-          {/* Main big Gauge scorecard */}
-          <div className="lg:col-span-8 bg-white border border-outline-variant p-6 md:p-8 rounded-3xl space-y-6 shadow-sm">
-            <div className="flex justify-between items-center bg-surface-container-low/50 p-4 rounded-2xl">
-              <div>
-                <h3 className="font-display font-semibold text-base text-on-surface">{workerName.split(' ')[0]}'s SWEAT™️ Trust Score</h3>
-                <p className="text-xs text-on-surface-variant leading-relaxed">Calculated from student portal records, attendance rates, and local feedback.</p>
+          {/* Top Row Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
+            {/* Profile Card */}
+            <div className="md:col-span-8 bg-white rounded-2xl border border-outline-variant p-6 shadow-sm flex flex-col sm:flex-row gap-6 items-start">
+              <div className="relative flex-shrink-0">
+                <img src={workerAvatar} alt={workerName} className="w-32 h-32 rounded-xl object-cover border border-outline-variant shadow-sm" />
+                <div className="absolute -bottom-2 -right-2 bg-green-600 text-white p-1 rounded-md border-2 border-white shadow-sm">
+                  <ShieldCheck size={14} />
+                </div>
               </div>
-              <div className="text-right">
-                <p className="font-display font-bold text-3xl text-secondary">{reliabilityScore} <span className="text-xs text-on-surface-variant font-mono">/ 5.0</span></p>
-                <p className="text-xs text-tertiary font-bold flex items-center gap-0.5 justify-end mt-0.5">
-                  <TrendingUp size={12} />
-                  {parseFloat(reliabilityScore) >= 4.5 ? 'Top Tier Elite' : 'Good Standing'}
+              <div className="space-y-3">
+                <div className="flex flex-wrap items-center gap-3">
+                  <h1 className="font-display font-bold text-2xl text-on-surface">{workerName}</h1>
+                  <span className="bg-green-100 text-green-800 text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1 border border-green-200">
+                    <Award size={10} /> Verified UMS Student
+                  </span>
+                </div>
+                <p className="text-sm text-on-surface-variant leading-relaxed font-medium">
+                  {profile?.bio || `Student at Universiti Malaysia Sabah. Specialized in event support and local delivery tasks. Known for punctuality and quick learning.`}
                 </p>
+                <div className="flex flex-wrap gap-2 pt-1">
+                  <span className="flex items-center gap-1 text-[10px] bg-surface-container font-semibold px-2 py-1 rounded-md text-on-surface-variant border border-outline-variant/50">
+                    <MapPin size={12} /> {profile?.location || 'Sepanggar, KK'}
+                  </span>
+                  <span className="flex items-center gap-1 text-[10px] bg-surface-container font-semibold px-2 py-1 rounded-md text-on-surface-variant border border-outline-variant/50">
+                    <Globe size={12} /> Malay, English
+                  </span>
+                  <span className="flex items-center gap-1 text-[10px] bg-surface-container font-semibold px-2 py-1 rounded-md text-on-surface-variant border border-outline-variant/50">
+                    <Calendar size={12} /> Member since Jan 2024
+                  </span>
+                </div>
               </div>
             </div>
 
-            {/* Attendance Progress bar metrics */}
-            <div className="space-y-2">
-              <div className="flex justify-between items-center text-xs font-semibold">
-                <span className="text-on-surface">Shift Attendance Rate</span>
-                <span className="text-primary font-bold">{attendanceRate}% ({completedShifts}/{completedShifts + noShowCount} shifts)</span>
+            {/* Stats Cards */}
+            <div className="md:col-span-4 grid grid-cols-2 gap-4">
+              <div className="bg-primary rounded-2xl p-4 text-white shadow-sm flex flex-col justify-center items-center text-center relative overflow-hidden">
+                <div className="absolute top-0 right-0 p-3 opacity-20"><Award size={48} /></div>
+                <span className="text-4xl font-black relative z-10">{completedShifts}</span>
+                <span className="text-xs font-bold text-white/80 mt-1 relative z-10">Gigs Done</span>
               </div>
-              <div className="w-full bg-outline-variant h-2.5 rounded-full overflow-hidden">
-                <div className="bg-primary h-full rounded-full transition-all duration-500 shadow-xs" style={{ width: `${attendanceRate}%` }}></div>
+              <div className="bg-secondary rounded-2xl p-4 text-white shadow-sm flex flex-col justify-center items-center text-center relative overflow-hidden">
+                <div className="absolute top-0 right-0 p-3 opacity-20"><Star size={48} /></div>
+                <span className="text-4xl font-black relative z-10 flex items-center gap-1">
+                  {parseFloat(reliabilityScore) >= 4.5 ? 4.9 : parseFloat(reliabilityScore).toFixed(1)} <Star size={20} fill="currentColor" />
+                </span>
+                <span className="text-xs font-bold text-white/80 mt-1 relative z-10">Avg Rating</span>
               </div>
-            </div>
-
-            {/* Secondary metrics highlights */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-4">
-              <div className="p-4 bg-surface rounded-2xl border border-outline-variant space-y-1">
-                <span className="text-[10px] text-on-surface-variant font-bold uppercase tracking-wide">Punctuality</span>
-                <p className="font-bold text-base text-on-surface">98% In-Time</p>
-                <p className="text-[10px] text-tertiary-container font-semibold font-sans">Average 8m early arrivals</p>
-              </div>
-              <div className="p-4 bg-surface rounded-2xl border border-outline-variant space-y-1">
-                <span className="text-[10px] text-on-surface-variant font-bold uppercase tracking-wide">No-Shows</span>
-                <p className={`font-bold text-base ${noShowCount > 0 ? 'text-red-500' : 'text-tertiary'}`}>{noShowCount} Incidents</p>
-                <p className="text-[10px] text-on-surface-variant font-medium">Automatic block at 3 incidents</p>
-              </div>
-              <div className="p-4 bg-surface rounded-2xl border border-outline-variant space-y-1">
-                <span className="text-[10px] text-on-surface-variant font-bold uppercase tracking-wide">Perfect Streak</span>
-                <p className="font-bold text-base text-secondary">{completedShifts} shifts</p>
-                <p className="text-[10px] text-tertiary-container font-semibold">Verified by local merchants</p>
-              </div>
-            </div>
-
-            {/* Proactive tip helper card */}
-            <div className="bg-primary/5 p-4 rounded-2xl border border-primary/20 flex gap-3">
-              <Lightbulb className="text-primary flex-shrink-0 mt-0.5" size={18} />
-              <div>
-                <h4 className="font-bold text-xs text-primary uppercase tracking-wide">How to increase your score</h4>
-                <p className="text-xs text-on-surface-variant leading-relaxed mt-1">
-                  Keep your <strong>Emergency Backup Pool</strong> toggle active! Showing up immediately for local "Fast Fill" calls adds double loyalty multipliers to your student scorecard profile!
-                </p>
+              <div className="col-span-2 bg-white rounded-2xl border border-outline-variant p-4 shadow-sm flex items-center gap-4">
+                <div className="w-12 h-12 bg-green-50 rounded-xl flex items-center justify-center border border-green-100 flex-shrink-0">
+                  <CheckCircle className="text-green-600" size={24} />
+                </div>
+                <div>
+                  <h3 className="font-black text-2xl text-on-surface leading-none">{attendanceRate}%</h3>
+                  <p className="text-xs font-semibold text-on-surface-variant mt-1">Attendance Rate</p>
+                </div>
               </div>
             </div>
           </div>
 
-          {/* Backup Pool toggle column */}
-          <div className="lg:col-span-4 space-y-6">
-            <div className="bg-white p-6 rounded-3xl border border-outline-variant space-y-4 shadow-xs">
-              <div className="flex justify-between items-center">
-                <span className="font-display font-semibold text-sm text-on-surface">Backup Pool Readiness</span>
-                <label className="relative inline-flex items-center cursor-pointer select-none">
-                  <input 
-                    type="checkbox" 
-                    checked={isBackupReady}
-                    onChange={() => {
-                      setIsBackupReady(!isBackupReady);
-                      showToast(isBackupReady ? "Emergency Profile set to Offline" : "Emergency Profile is LIVE! Local SMEs can call you up.");
-                    }}
-                    className="sr-only peer" 
-                  />
-                  <div className="w-11 h-6 bg-outline-variant peer-focus:outline-hidden rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-outline-variant after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-tertiary"></div>
-                </label>
+          {/* The Reliability Proof Card */}
+          <div className="bg-[#0f2e26] rounded-3xl p-8 md:p-10 shadow-lg relative overflow-hidden text-white flex flex-col md:flex-row justify-between items-center gap-10">
+            <div className="absolute inset-0 opacity-10 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-green-300 via-transparent to-transparent z-0"></div>
+            
+            <div className="flex-1 relative z-10 space-y-6">
+              <div className="inline-flex items-center gap-2 border border-green-500/30 bg-green-900/30 px-3 py-1.5 rounded-full text-green-300 text-xs font-bold uppercase tracking-wider">
+                <ShieldCheck size={14} /> The Reliability Proof
+              </div>
+              
+              <h2 className="font-display text-2xl md:text-3xl font-bold">Why employers trust {workerName.split(' ')[0]}</h2>
+              <p className="text-green-100/80 text-sm leading-relaxed max-w-lg">
+                Our proprietary Reliability Score combines attendance, promptness, and peer-reviewed task quality. Students with a score above 90% typically earn <span className="font-bold text-green-300">15% more per hour</span> due to high employer demand.
+              </p>
+              
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 pt-4">
+                <div className="space-y-1">
+                  <h4 className="flex items-center gap-2 text-amber-400 font-bold text-sm">
+                    <CheckCircle2 size={16} /> Zero No-Shows
+                  </h4>
+                  <p className="text-xs text-green-100/70 max-w-[200px] leading-relaxed">
+                    {workerName.split(' ')[0]} has never canceled a gig within 24 hours.
+                  </p>
+                </div>
+                <div className="space-y-1">
+                  <h4 className="flex items-center gap-2 text-amber-400 font-bold text-sm">
+                    <TrendingUp size={16} /> Top 5% Performer
+                  </h4>
+                  <p className="text-xs text-green-100/70 max-w-[200px] leading-relaxed">
+                    Ranked in the top tier of workers in Kota Kinabalu.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="relative z-10 bg-black/20 p-8 rounded-3xl border border-white/10 flex flex-col items-center justify-center min-w-[240px]">
+              <span className="text-xs text-green-100/80 font-bold mb-4 tracking-wider">Reliability Score</span>
+              
+              <div className="relative w-32 h-32 flex items-center justify-center">
+                <svg className="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
+                  <circle cx="50" cy="50" r="45" fill="none" stroke="rgba(255,255,255,0.1)" strokeWidth="8" />
+                  <circle cx="50" cy="50" r="45" fill="none" stroke="#2dd4bf" strokeWidth="8" strokeDasharray="282.7" strokeDashoffset={282.7 - (282.7 * (parseFloat(reliabilityScore)*20)) / 100} className="transition-all duration-1000 ease-out" strokeLinecap="round" />
+                </svg>
+                <div className="absolute inset-0 flex items-center justify-center flex-col">
+                  <span className="text-4xl font-black text-white">{Math.round(parseFloat(reliabilityScore)*20)}</span>
+                </div>
               </div>
 
-              {isBackupReady ? (
-                <div className="p-3 bg-tertiary/10 border border-tertiary/20 text-tertiary rounded-xl flex items-center gap-2">
-                  <span className="w-2.5 h-2.5 rounded-full bg-tertiary animate-ping"></span>
-                  <span className="text-[11px] font-bold">READY FOR EMERGENCY BOOKING</span>
+              <div className="mt-5 border border-green-500/50 bg-green-900/50 text-green-300 text-xs font-bold px-4 py-1.5 rounded-full">
+                {parseFloat(reliabilityScore) >= 4.5 ? 'Elite Status' : 'Good Status'}
+              </div>
+            </div>
+          </div>
+
+          {/* Verified Work History */}
+          <div className="space-y-4 pt-4">
+            <div className="flex justify-between items-end">
+              <div>
+                <h3 className="font-display font-bold text-xl text-on-surface">Verified Work History</h3>
+                <p className="text-sm text-on-surface-variant mt-1">Real reviews from local businesses in Sabah</p>
+              </div>
+              <button className="text-primary font-bold text-sm hover:underline">View All Gigs</button>
+            </div>
+
+            <div className="space-y-4">
+              {activeHistory.filter(item => item.rating_given).length === 0 ? (
+                <div className="bg-white border border-outline-variant rounded-2xl p-6 flex flex-col md:flex-row gap-4 justify-between items-start">
+                  <div className="flex gap-4">
+                    <div className="w-12 h-12 rounded-xl bg-surface-container flex items-center justify-center text-on-surface-variant flex-shrink-0">
+                      <span className="material-symbols-outlined">storefront</span>
+                    </div>
+                    <div>
+                      <h4 className="font-bold text-base text-on-surface">Kopi & Friends (Likas)</h4>
+                      <p className="text-sm text-on-surface-variant italic mt-1 font-medium">"{workerName.split(' ')[0]} was incredibly fast at clearing tables during our Sunday rush. Showed up 10 mins early."</p>
+                      <div className="flex gap-2 mt-3">
+                        <span className="text-[10px] font-bold bg-surface-container text-on-surface-variant px-2 py-1 rounded">Event Support</span>
+                        <span className="text-[10px] font-bold bg-surface-container text-on-surface-variant px-2 py-1 rounded">4 Hours</span>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex flex-col items-end gap-1">
+                    <div className="flex text-secondary"><Star size={14} fill="currentColor"/><Star size={14} fill="currentColor"/><Star size={14} fill="currentColor"/><Star size={14} fill="currentColor"/><Star size={14} fill="currentColor"/></div>
+                    <span className="text-xs text-on-surface-variant font-medium">May 12, 2024</span>
+                  </div>
                 </div>
               ) : (
-                <div className="p-3 bg-surface-container border border-outline-variant text-on-surface-variant rounded-xl flex items-center gap-2">
-                  <span className="w-2.5 h-2.5 rounded-full bg-outline"></span>
-                  <span className="text-[11px] font-bold">OFFLINE MODE</span>
-                </div>
+                activeHistory.filter(item => item.rating_given).map(item => (
+                  <div key={item.id} className="bg-white border border-outline-variant rounded-2xl p-6 flex flex-col md:flex-row gap-4 justify-between items-start">
+                    <div className="flex gap-4">
+                      <div className="w-12 h-12 rounded-xl bg-surface-container flex items-center justify-center text-on-surface-variant flex-shrink-0">
+                        <span className="material-symbols-outlined">
+                          {item.gig_title.toLowerCase().includes('delivery') ? 'local_shipping' : 'storefront'}
+                        </span>
+                      </div>
+                      <div>
+                        <h4 className="font-bold text-base text-on-surface">{item.employer_name || 'Local SME'}</h4>
+                        <p className="text-sm text-on-surface-variant italic mt-1 font-medium">"{item.review || 'Great communication. Delivered all items carefully and followed safety protocols.'}"</p>
+                        <div className="flex gap-2 mt-3">
+                          <span className="text-[10px] font-bold bg-surface-container text-on-surface-variant px-2 py-1 rounded">{item.gig_title}</span>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex flex-col items-end gap-1">
+                      <div className="flex text-secondary">
+                        {[...Array(5)].map((_, i) => (
+                          <Star key={i} size={14} fill={i < item.rating ? "currentColor" : "none"} className={i < item.rating ? 'text-secondary' : 'text-outline-variant'} />
+                        ))}
+                      </div>
+                      <span className="text-xs text-on-surface-variant font-medium">{new Date(item.created_at).toLocaleDateString()}</span>
+                    </div>
+                  </div>
+                ))
               )}
-
-              <p className="text-xs text-on-surface-variant leading-relaxed">
-                Toggle your availability for instant emergency shift call-ups. When active, local cafes can hire you instantly if their staff cancels.
-              </p>
-              <div className="border-t border-outline-variant/60 pt-3 flex flex-col gap-2 text-xs">
-                <div className="flex justify-between text-on-surface-variant font-medium">
-                  <span>Current Range:</span>
-                  <span className="font-bold text-on-surface">5km (Likas/KK Center)</span>
-                </div>
-                <div className="flex justify-between text-on-surface-variant font-medium">
-                  <span>Contact Route:</span>
-                  <span className="font-bold text-primary flex items-center gap-0.5">GigIT Chat / WhatsApp</span>
-                </div>
-              </div>
             </div>
           </div>
-        </section>
-
-        {/* Business Reviews History list */}
-        <section className="space-y-4">
-          <h3 className="font-display font-semibold text-lg text-on-surface">What Sabah SMEs Say About {workerName.split(' ')[0]}</h3>
-          {activeHistory.filter(item => item.rating_given).length === 0 ? (
-            <div className="text-center py-8 bg-white border border-outline-variant rounded-2xl">
-              <p className="text-sm text-on-surface-variant">No SME reviews found yet. Complete shifts to earn endorsements!</p>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {activeHistory.filter(item => item.rating_given).map((item) => (
-                <div key={item.id} className="bg-white p-6 rounded-2xl border border-outline-variant space-y-4 shadow-xs relative">
-                  <div className="flex justify-between items-start">
-                    <div>
-                      <h4 className="font-semibold text-sm text-on-surface">{item.employer_name || 'Local SME'}</h4>
-                      <span className="text-[10px] text-on-surface-variant font-medium flex items-center gap-1 mt-0.5 font-sans">
-                        <Calendar size={12} className="text-primary-container" />
-                        {new Date(item.created_at || item.clock_in_time).toLocaleDateString()} • {item.gig_title}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-0.5 text-secondary">
-                      {[...Array(5)].map((_, i) => (
-                        <Star key={i} size={15} fill={i < item.rating ? "currentColor" : "none"} className={i < item.rating ? 'text-secondary' : 'text-outline-variant'} />
-                      ))}
-                    </div>
-                  </div>
-                  <p className="text-xs italic text-on-surface-variant leading-relaxed bg-surface/40 p-3 rounded-lg border border-outline-variant/40">
-                    "{item.review || item.quote}"
-                  </p>
-                  <div className="flex justify-between items-center text-[10px] text-outline font-semibold">
-                    <span className="bg-surface-container px-2.5 py-0.5 rounded-full">Completed Shift</span>
-                    <span className="text-tertiary flex items-center gap-0.5">
-                      <Check size={12} className="bg-tertiary/10 p-px rounded-full" />
-                      Verified Shift Pay Completed
-                    </span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </section>
-
-        {/* SME Simulator dialog form overlay */}
-        <AnimatePresence>
-          {showSimulator && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
-              <motion.div 
-                initial={{ scale: 0.95, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                exit={{ scale: 0.95, opacity: 0 }}
-                className="bg-white rounded-2xl max-w-md w-full overflow-hidden shadow-2xl border border-outline-variant"
-              >
-                <div className="px-6 py-4 border-b border-outline-variant bg-surface flex justify-between items-center">
-                  <h3 className="font-display font-bold text-sm text-primary">Simulate Business Feedback</h3>
-                  <button onClick={() => setShowSimulator(false)} className="text-on-surface-variant hover:text-on-surface">
-                    <X size={20} />
-                  </button>
-                </div>
-                <form onSubmit={handleAddReview} className="p-6 space-y-4">
-                  <div>
-                    <label className="block text-xs font-bold text-on-surface-variant mb-1 uppercase tracking-wide">SME Name</label>
-                    <input 
-                      type="text" 
-                      required
-                      value={simSME} 
-                      onChange={e => setSimSME(e.target.value)}
-                      className="w-full px-3.5 py-2 rounded-xl border border-outline-variant focus:outline-primary placeholder:text-outline-variant text-sm bg-surface-container-lowest"
-                      placeholder="e.g. Gaya Cafe, Borneo Mart"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-bold text-on-surface-variant mb-1 uppercase tracking-wide">Rating (out of 5 stars)</label>
-                    <select 
-                      value={simRating} 
-                      onChange={e => setSimRating(Number(e.target.value))}
-                      className="w-full px-3.5 py-2 rounded-xl border border-outline-variant focus:outline-primary text-sm bg-surface-container-lowest"
-                    >
-                      <option value={5}>⭐⭐⭐⭐⭐ (5/5)</option>
-                      <option value={4}>⭐⭐⭐⭐ (4/5)</option>
-                      <option value={3}>⭐⭐⭐ (3/5)</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-xs font-bold text-on-surface-variant mb-1 uppercase tracking-wide">Review Comment</label>
-                    <textarea 
-                      rows={3}
-                      required
-                      value={simComment} 
-                      onChange={e => setSimComment(e.target.value)}
-                      className="w-full px-3.5 py-2 rounded-xl border border-outline-primary placeholder:text-outline-variant text-sm bg-surface-container-lowest"
-                      placeholder="Helpful comment feedback about worker's shift."
-                    />
-                  </div>
-                  
-                  <div className="pt-4 flex gap-3">
-                    <button 
-                      type="button"
-                      onClick={() => setShowSimulator(false)}
-                      className="flex-1 py-2.5 border border-outline-variant rounded-xl text-xs font-bold text-on-surface hover:bg-surface active:scale-95 transition-all text-sm cursor-pointer"
-                    >
-                      Cancel
-                    </button>
-                    <button 
-                      type="submit"
-                      disabled={isAnalyzing}
-                      className="flex-1 py-2.5 bg-primary text-white rounded-xl font-bold shadow-md hover:bg-primary/95 hover:scale-102 active:scale-95 transition-all text-sm cursor-pointer disabled:opacity-70 flex justify-center items-center"
-                    >
-                      {isAnalyzing ? (
-                        <span className="animate-pulse">Gemini is Analyzing...</span>
-                      ) : (
-                        "Publish SME Endorsement"
-                      )}
-                    </button>
-                  </div>
-                </form>
-              </motion.div>
-            </div>
-          )}
-        </AnimatePresence>
+        </div>
       </main>
-
-      {/* Mobile navigation menu spacer (Mobile Only) */}
-      <div className="md:hidden fixed bottom-0 left-0 w-full z-50 bg-surface border-t border-outline-variant py-2 flex justify-around items-center shadow-lg">
-        <button 
-          onClick={() => onNavigate(AppView.Landing)}
-          className="flex flex-col items-center text-on-surface-variant"
-        >
-          <span className="material-symbols-outlined text-xl">home</span>
-          <span className="text-[10px] mt-0.5 font-sans">Home</span>
-        </button>
-        <button 
-          onClick={() => onNavigate(AppView.WorkerBrowse)}
-          className="flex flex-col items-center text-on-surface-variant"
-        >
-          <span className="material-symbols-outlined text-xl">work</span>
-          <span className="text-[10px] mt-0.5 font-sans">Gigs</span>
-        </button>
-        <button 
-          onClick={() => onNavigate(AppView.WorkerReliability)}
-          className="flex flex-col items-center text-primary"
-        >
-          <div className="p-1 px-4 bg-primary-container/20 text-primary rounded-full">
-            <span className="material-symbols-outlined text-md">person</span>
-          </div>
-          <span className="text-[10px] font-bold mt-1 font-sans">Profile</span>
-        </button>
-      </div>
-    </div>
-  );
-}
-
-interface DemoControlPanelProps {
-  onSimulateReview: () => void;
-  onSimulateNoShow: () => void;
-}
-
-function DemoControlPanel({ onSimulateReview, onSimulateNoShow }: DemoControlPanelProps) {
-  const [isOpen, setIsOpen] = useState(false);
-
-  return (
-    <div className="bg-white border border-outline-variant shadow-xl rounded-2xl overflow-hidden max-w-[240px] md:max-w-xs transition-all duration-300">
-      {/* Drawer Header */}
-      <button 
-        onClick={() => setIsOpen(!isOpen)}
-        className="w-full flex items-center justify-between px-4 py-2.5 bg-surface-container-high hover:bg-surface-container-highest transition-colors font-sans text-[10px] font-bold text-primary tracking-wider uppercase select-none cursor-pointer"
-      >
-        <div className="flex items-center gap-1.5">
-          <span className="material-symbols-outlined text-sm animate-pulse text-secondary">science</span>
-          <span>SANDBOX HELPERS</span>
-        </div>
-        <span className="material-symbols-outlined text-xs">
-          {isOpen ? 'keyboard_arrow_down' : 'keyboard_arrow_up'}
-        </span>
-      </button>
-
-      {isOpen && (
-        <div className="p-3.5 space-y-3 bg-white border-t border-outline-variant">
-          <p className="text-[10px] text-on-surface-variant font-medium leading-normal">
-            Easily test GigIT reactive status states:
-          </p>
-          <div className="space-y-2">
-            <button 
-              onClick={onSimulateReview}
-              className="w-full text-left flex items-center justify-between p-2 rounded-lg bg-primary/5 hover:bg-primary/10 border border-primary/20 transition-all font-sans text-[10px] font-bold text-primary cursor-pointer select-none"
-            >
-              <span>Inject Mock SME Review</span>
-              <span className="material-symbols-outlined text-xs">add</span>
-            </button>
-            <button 
-              onClick={onSimulateNoShow}
-              className="w-full text-left flex items-center justify-between p-2 rounded-lg bg-red-50 hover:bg-red-100 border border-red-200 transition-all font-sans text-[10px] font-bold text-red-600 cursor-pointer select-none"
-            >
-              <span>Apply Attendance Flag</span>
-              <span className="material-symbols-outlined text-xs">warning</span>
-            </button>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

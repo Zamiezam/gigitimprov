@@ -24,6 +24,7 @@ interface HiredWorker {
   payment_status: 'pending' | 'paid' | 'processing';
   rating_given: boolean;
   rating?: number;
+  sweat_metrics?: any;
   review?: string;
 }
 
@@ -53,6 +54,9 @@ export default function HiredWorkers() {
   const [selectedWorker, setSelectedWorker] = useState<HiredWorker | null>(null);
   const [showReviewModal, setShowReviewModal] = useState(false);
   const [rating, setRating] = useState(5);
+  const [skillsRating, setSkillsRating] = useState(5);
+  const [workEthicRating, setWorkEthicRating] = useState(5);
+  const [trustRating, setTrustRating] = useState(5);
   const [reviewText, setReviewText] = useState('');
   const [selectedDefaultReview, setSelectedDefaultReview] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -134,13 +138,20 @@ export default function HiredWorkers() {
     setIsSubmitting(true);
     
     try {
-      // Update hired_worker with review and change status to 'verified'
+      const overallRating = (skillsRating + workEthicRating + trustRating) / 3;
+      const sweatMetrics = {
+        skills: skillsRating,
+        work_ethic: workEthicRating,
+        trust: trustRating
+      };
+
       const { error } = await supabase
         .from('hired_workers')
         .update({
           status: 'verified',
           rating_given: true,
-          rating: rating,
+          rating: overallRating,
+          sweat_metrics: sweatMetrics,
           review: reviewText,
           updated_at: new Date().toISOString()
         })
@@ -152,7 +163,7 @@ export default function HiredWorkers() {
       // Update local state
       setHiredWorkers(prev => prev.map(worker => 
         worker.id === selectedWorker.id 
-          ? { ...worker, status: 'verified', rating_given: true, rating, review: reviewText }
+          ? { ...worker, status: 'verified', rating_given: true, rating: overallRating, sweat_metrics: sweatMetrics, review: reviewText }
           : worker
       ));
       
@@ -174,8 +185,24 @@ export default function HiredWorkers() {
   const applyDefaultReview = (review: { text: string; rating: number }) => {
     setSelectedDefaultReview(review.text);
     setReviewText(review.text);
-    setRating(review.rating);
+    setSkillsRating(review.rating);
+    setWorkEthicRating(review.rating);
+    setTrustRating(review.rating);
   };
+
+  const renderStars = (value: number, setter: (val: number) => void) => (
+    <div className="flex gap-1">
+      {[1, 2, 3, 4, 5].map((star) => (
+        <button key={star} onClick={() => setter(star)} className="focus:outline-none">
+          <Star 
+            size={24} 
+            fill={star <= value ? "currentColor" : "none"} 
+            className={star <= value ? 'text-secondary' : 'text-gray-300'} 
+          />
+        </button>
+      ))}
+    </div>
+  );
 
   const filteredWorkers = hiredWorkers
     .filter(w => statusFilter === 'all' || w.status === statusFilter)
@@ -546,19 +573,22 @@ export default function HiredWorkers() {
                   </div>
                 </div>
 
-                {/* Rating */}
-                <div className="mb-4">
-                  <label className="block text-xs font-bold mb-1">Rating</label>
-                  <div className="flex gap-1">
-                    {[1, 2, 3, 4, 5].map((star) => (
-                      <button key={star} onClick={() => setRating(star)} className="focus:outline-none">
-                        <Star 
-                          size={28} 
-                          fill={star <= rating ? "currentColor" : "none"} 
-                          className={star <= rating ? 'text-secondary' : 'text-gray-300'} 
-                        />
-                      </button>
-                    ))}
+                {/* SWEAT Ratings */}
+                <div className="mb-4 space-y-3">
+                  <div>
+                    <label className="block text-xs font-bold mb-1">Skills</label>
+                    <p className="text-[10px] text-on-surface-variant mb-1">Did they possess the required skills?</p>
+                    {renderStars(skillsRating, setSkillsRating)}
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold mb-1">Work Ethic</label>
+                    <p className="text-[10px] text-on-surface-variant mb-1">Were they proactive and hardworking?</p>
+                    {renderStars(workEthicRating, setWorkEthicRating)}
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold mb-1">Trust & Professionalism</label>
+                    <p className="text-[10px] text-on-surface-variant mb-1">Were they honest, safe, and professional?</p>
+                    {renderStars(trustRating, setTrustRating)}
                   </div>
                 </div>
 

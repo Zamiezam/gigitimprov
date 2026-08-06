@@ -61,6 +61,7 @@ export default function WorkerProfileSettings() {
   const [aiVerificationResult, setAiVerificationResult] = useState<any>(null);
   const [isAvailable, setIsAvailable] = useState<boolean>(() => localStorage.getItem('gigit_available') === 'true');
   const [togglingAvailability, setTogglingAvailability] = useState(false);
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
 
   useEffect(() => {
     if (user) {
@@ -251,17 +252,10 @@ export default function WorkerProfileSettings() {
           }
         } catch (apiErr) {
           console.error('AI verify API error:', apiErr);
-          showToast('❌ AI verification service unavailable. Mocking success.');
-          // Mock verification for demo safety
-          setIsVerified(true);
-          setUniversity('Generic University');
-          setMatricId('BI22110294');
+          showToast('❌ AI verification failed. Please try again or contact support.');
           setAiVerificationResult({
-            isValid: true,
-            university: 'UMS',
-            name: fullName || 'Student Name',
-            matricId: 'BI22110294',
-            reason: 'Demonstration mock verification success'
+            isValid: false,
+            reason: 'Verification service unavailable or failed.'
           });
         } finally {
           setVerifyingCard(false);
@@ -271,6 +265,37 @@ export default function WorkerProfileSettings() {
     } catch (err) {
       console.error('File read error:', err);
       setVerifyingCard(false);
+    }
+  };
+
+  const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !user) return;
+    
+    setUploadingAvatar(true);
+    showToast('Uploading avatar...');
+    try {
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${user.id}-${Math.random()}.${fileExt}`;
+      const filePath = `${fileName}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('avatars')
+        .upload(filePath, file);
+
+      if (uploadError) throw uploadError;
+
+      const { data } = supabase.storage.from('avatars').getPublicUrl(filePath);
+      if (data.publicUrl) {
+        setAvatarUrl(data.publicUrl);
+        setCustomAvatarUrl(data.publicUrl);
+        showToast('Avatar uploaded successfully!');
+      }
+    } catch (error) {
+      console.error('Error uploading avatar:', error);
+      showToast('❌ Error uploading avatar. Make sure the avatars bucket exists and is public.');
+    } finally {
+      setUploadingAvatar(false);
     }
   };
 
@@ -325,18 +350,31 @@ export default function WorkerProfileSettings() {
                   ))}
                 </div>
 
-                <div className="pt-2 border-t border-outline-variant/60">
-                  <label className="block text-[10px] text-on-surface-variant font-bold uppercase tracking-wider text-left mb-1">Or paste custom image URL:</label>
-                  <input 
-                    type="text" 
-                    value={customAvatarUrl} 
-                    onChange={e => {
-                      setCustomAvatarUrl(e.target.value);
-                      if (e.target.value.trim().startsWith('http')) setAvatarUrl(e.target.value.trim());
-                    }}
-                    placeholder="https://example.com/avatar.jpg"
-                    className="w-full px-3 py-1.5 rounded-lg border border-outline-variant text-xs focus:outline-primary bg-surface-container-lowest"
-                  />
+                <div className="pt-2 border-t border-outline-variant/60 space-y-3">
+                  <div>
+                    <label className="block text-[10px] text-on-surface-variant font-bold uppercase tracking-wider text-left mb-1">Upload Your Own Image (Max 2MB):</label>
+                    <input 
+                      type="file" 
+                      accept="image/*"
+                      onChange={handleAvatarUpload}
+                      disabled={uploadingAvatar}
+                      className="w-full text-xs file:mr-3 file:py-1.5 file:px-3 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-primary/20 bg-surface-container-lowest border border-outline-variant rounded-lg p-1"
+                    />
+                    {uploadingAvatar && <p className="text-[10px] text-primary mt-1 animate-pulse">Uploading...</p>}
+                  </div>
+                  <div>
+                    <label className="block text-[10px] text-on-surface-variant font-bold uppercase tracking-wider text-left mb-1">Or paste custom image URL:</label>
+                    <input 
+                      type="text" 
+                      value={customAvatarUrl} 
+                      onChange={e => {
+                        setCustomAvatarUrl(e.target.value);
+                        if (e.target.value.trim().startsWith('http')) setAvatarUrl(e.target.value.trim());
+                      }}
+                      placeholder="https://example.com/avatar.jpg"
+                      className="w-full px-3 py-1.5 rounded-lg border border-outline-variant text-xs focus:outline-primary bg-surface-container-lowest"
+                    />
+                  </div>
                 </div>
               </div>
 
