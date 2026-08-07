@@ -151,7 +151,20 @@ export default function WorkerProfileSettings() {
   const handleSave = async () => {
     setSaving(true);
     try {
-      // Build update payload
+      // First, detect which columns actually exist in the profiles table
+      const { data: testData } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', user?.id)
+        .single();
+
+      if (!testData) {
+        showToast('❌ Could not load profile data');
+        setSaving(false);
+        return;
+      }
+
+      // Start with core columns that always exist
       const payload: any = {
         full_name: fullName,
         phone_number: phone,
@@ -159,6 +172,10 @@ export default function WorkerProfileSettings() {
         university: university,
         matric_id: matricId,
         is_verified: isVerified,
+      };
+
+      // Dynamically add fields ONLY if the column exists in the DB
+      const optionalFields: Record<string, any> = {
         education_level: educationLevel,
         languages: languages,
         preferred_categories: preferredCategories,
@@ -173,25 +190,20 @@ export default function WorkerProfileSettings() {
         income_classification: householdIncome === '' ? null : (Number(householdIncome) <= 4850 ? 'B40' : Number(householdIncome) <= 10970 ? 'M40' : 'T20'),
         available_days: availableDays,
         available_times: availableTimes,
-        updated_at: new Date().toISOString()
+        transport: transport,
+        skills: skills,
+        experience: experience,
+        bio: bio,
       };
 
-      // Check if custom columns exist or default to JSON-in-bio fallback
-      const { data: testData } = await supabase
-        .from('profiles')
-        .select('*')
-        .limit(1)
-        .single();
+      for (const [key, value] of Object.entries(optionalFields)) {
+        if (key in testData) {
+          payload[key] = value;
+        }
+      }
 
-      const hasCustomColumns = testData && ('transport' in testData) && ('skills' in testData) && ('experience' in testData);
-
-      if (hasCustomColumns) {
-        payload.transport = transport;
-        payload.skills = skills;
-        payload.experience = experience;
-        payload.bio = bio;
-      } else {
-        // Fallback: Serialize custom fields inside the bio column
+      // If transport/skills/experience columns don't exist, fallback to JSON-in-bio
+      if (!('transport' in testData) || !('skills' in testData) || !('experience' in testData)) {
         payload.bio = JSON.stringify({
           bio: bio,
           transport: transport,
@@ -199,6 +211,8 @@ export default function WorkerProfileSettings() {
           experience: experience
         });
       }
+
+      console.log('Saving profile payload with keys:', Object.keys(payload));
 
       const { error } = await supabase
         .from('profiles')

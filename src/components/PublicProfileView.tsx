@@ -170,18 +170,10 @@ export default function PublicProfileView({ workerId }: PublicProfileViewProps) 
     if (!resumeRef.current) return;
     setGenerating(true);
     try {
-      // Temporarily show it offscreen to render
+      // Use browser print dialog for PDF generation (avoids html2canvas oklab crash)
       resumeRef.current.style.display = 'block';
-      const canvas = await html2canvas(resumeRef.current, { scale: 2, useCORS: true });
+      window.print();
       resumeRef.current.style.display = 'none';
-
-      const imgData = canvas.toDataURL('image/jpeg', 1.0);
-      const pdf = new jsPDF('p', 'mm', 'a4');
-      const pdfWidth = pdf.internal.pageSize.getWidth();
-      const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
-      
-      pdf.addImage(imgData, 'JPEG', 0, 0, pdfWidth, pdfHeight);
-      pdf.save(`${workerName.replace(/\s+/g, '_')}_Resume.pdf`);
     } catch (err) {
       console.error('Error generating PDF', err);
     } finally {
