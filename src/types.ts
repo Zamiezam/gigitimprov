@@ -2,7 +2,8 @@ export enum AppView {
   Landing = 'landing',
   EmployerDashboard = 'employer-dashboard',
   WorkerBrowse = 'worker-browse',
-  WorkerReliability = 'worker-reliability'
+  WorkerReliability = 'worker-reliability',
+  PublicProfile = 'public-profile'
 }
 
 export interface Gig {

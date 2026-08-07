@@ -6,6 +6,7 @@ import LandingView from './components/LandingView';
 import EmployerDashboardView from './components/EmployerDashboardView';
 import WorkerBrowseView from './components/WorkerBrowseView';
 import WorkerReliabilityView from './components/WorkerReliabilityView';
+import PublicProfileView from './components/PublicProfileView';
 import LoginPage from './pages/LoginPage';
 import { User, X, Check, Mail, Lock } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
@@ -19,10 +20,21 @@ export default function App() {
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [selectedRole, setSelectedRole] = useState<'worker' | 'employer'>('worker');
   const [authError, setAuthError] = useState<string | null>(null);
+  const [publicWorkerId, setPublicWorkerId] = useState<string | null>(null);
+
+  // Check for public NFC profile URL on mount
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const nfcId = params.get('nfc');
+    if (nfcId) {
+      setPublicWorkerId(nfcId);
+      setCurrentView(AppView.PublicProfile);
+    }
+  }, []);
 
   // Handle role-based navigation after login
   useEffect(() => {
-    if (user && userRole) {
+    if (user && userRole && currentView !== AppView.PublicProfile) {
       if (userRole === 'employer') {
         setCurrentView(AppView.EmployerDashboard);
       } else {
@@ -31,7 +43,7 @@ export default function App() {
       setShowSelector(false);
       setShowLoginModal(false);
     }
-  }, [user, userRole]);
+  }, [user, userRole, currentView]);
 
   const handleAddGig = (newGig: Gig) => {
     setGigs(prev => [newGig, ...prev]);
@@ -121,6 +133,10 @@ export default function App() {
               setCurrentView(AppView.Landing);
             }}
           />
+        )}
+
+        {currentView === AppView.PublicProfile && publicWorkerId && (
+          <PublicProfileView workerId={publicWorkerId} />
         )}
       </div>
 
