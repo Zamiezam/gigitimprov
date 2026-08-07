@@ -308,16 +308,27 @@ export default function WorkerBrowseView({
       const totalAmount = rateNum * durationHours;
 
       // 1. Create applicant record
-      const { error: appErr } = await supabase
+      const insertPayload = {
+        gig_id: id,
+        worker_id: user.id,
+        employer_id: gig.employer_id || 'employer-placeholder',
+        cover_letter: profile?.bio || 'Student helper interested in this role.',
+        status: isInstant ? 'Hired' : 'Pending',
+        created_at: new Date().toISOString(),
+      };
+
+      let { error: appErr } = await supabase
         .from('applicants')
-        .insert({
-          gig_id: id,
-          worker_id: user.id,
-          employer_id: gig.employer_id || 'employer-placeholder',
-          cover_letter: profile?.bio || 'Student helper interested in this role.',
-          status: isInstant ? 'Hired' : 'Pending',
-          created_at: new Date().toISOString(),
-        });
+        .insert(insertPayload);
+
+      // Fallback if cover_letter column doesn't exist yet
+      if (appErr && appErr.code === 'PGRST204') {
+        const { cover_letter, ...fallbackPayload } = insertPayload;
+        const retry = await supabase
+          .from('applicants')
+          .insert(fallbackPayload);
+        appErr = retry.error;
+      }
 
       if (appErr) throw appErr;
 
