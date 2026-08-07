@@ -308,7 +308,7 @@ export default function WorkerBrowseView({
       const totalAmount = rateNum * durationHours;
 
       // 1. Create applicant record
-      const insertPayload = {
+      const applicantPayload: any = {
         gig_id: id,
         worker_id: user.id,
         employer_id: gig.employer_id || 'employer-placeholder',
@@ -317,16 +317,13 @@ export default function WorkerBrowseView({
         created_at: new Date().toISOString(),
       };
 
-      let { error: appErr } = await supabase
-        .from('applicants')
-        .insert(insertPayload);
+      let { error: appErr } = await supabase.from('applicants').insert(applicantPayload);
 
-      // Fallback if cover_letter column doesn't exist yet
       if (appErr && appErr.code === 'PGRST204') {
-        const { cover_letter, ...fallbackPayload } = insertPayload;
-        const retry = await supabase
-          .from('applicants')
-          .insert(fallbackPayload);
+        // Fallback: remove cover_letter and created_at if they don't exist
+        delete applicantPayload.cover_letter;
+        delete applicantPayload.created_at;
+        const retry = await supabase.from('applicants').insert(applicantPayload);
         appErr = retry.error;
       }
 
@@ -334,25 +331,33 @@ export default function WorkerBrowseView({
 
       // 2. If instant booking, also create a hired worker record
       if (isInstant) {
-        const { error: hireErr } = await supabase
-          .from('hired_workers')
-          .insert({
-            worker_id: user.id,
-            worker_name: profile?.full_name || user.email?.split('@')[0] || 'Student Worker',
-            worker_avatar: profile?.avatar_url || 'https://randomuser.me/api/portraits/men/32.jpg',
-            employer_id: gig.employer_id || 'employer-placeholder',
-            employer_name: gig.employer || 'KK Business',
-            gig_title: gig.title,
-            gig_id: gig.id,
-            amount: totalAmount,
-            status: 'active',
-            payment_status: 'pending',
-            rating_given: false,
-            clock_in_time: null,
-            clock_out_time: null,
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString()
-          });
+        const hirePayload: any = {
+          worker_id: user.id,
+          worker_name: profile?.full_name || user.email?.split('@')[0] || 'Student Worker',
+          worker_avatar: profile?.avatar_url || 'https://randomuser.me/api/portraits/men/32.jpg',
+          employer_id: gig.employer_id || 'employer-placeholder',
+          employer_name: gig.employer || 'KK Business',
+          gig_title: gig.title,
+          gig_id: gig.id,
+          amount: totalAmount,
+          status: 'active',
+          payment_status: 'pending',
+          rating_given: false,
+          clock_in_time: null,
+          clock_out_time: null,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        };
+
+        let { error: hireErr } = await supabase.from('hired_workers').insert(hirePayload);
+
+        if (hireErr && hireErr.code === 'PGRST204') {
+           // Fallback: remove timestamp columns
+           delete hirePayload.created_at;
+           delete hirePayload.updated_at;
+           const retry = await supabase.from('hired_workers').insert(hirePayload);
+           hireErr = retry.error;
+        }
 
         if (hireErr) throw hireErr;
         fetchActiveShift();
