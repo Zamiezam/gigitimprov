@@ -754,7 +754,7 @@ export default function EmployerDashboardView({ onNavigate, gigs, onAddGig, onLo
                       setIsExportingEsg(true);
                       setTimeout(() => {
                         setIsExportingEsg(false);
-                        showToast("ESG Impact Report generated and sent to your email.");
+                        setShowSuccessToast("ESG Impact Report generated and sent to your email.");
                       }, 2000);
                     }}
                     disabled={isExportingEsg}

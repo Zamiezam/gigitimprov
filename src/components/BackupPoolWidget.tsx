@@ -45,15 +45,6 @@ export default function BackupPoolWidget({ gigId, gigTitle, employerId, onWorker
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [currentStep, setCurrentStep] = useState(0);
 
-  // Mock backup workers data
-  const mockBackupWorkers: BackupWorker[] = [
-    { id: 'backup-1', worker_name: 'Farhan Jamil', worker_avatar: 'https://randomuser.me/api/portraits/men/45.jpg', rating: 4.8, completed_gigs: 12, is_available: true, distance: '1.2km away' },
-    { id: 'backup-2', worker_name: 'Zulaikha Mohd', worker_avatar: 'https://randomuser.me/api/portraits/women/68.jpg', rating: 4.9, completed_gigs: 8, is_available: true, distance: '0.8km away' },
-    { id: 'backup-3', worker_name: 'Adam Bin Abdullah', worker_avatar: 'https://randomuser.me/api/portraits/men/32.jpg', rating: 4.7, completed_gigs: 5, is_available: true, distance: '2.3km away' },
-    { id: 'backup-4', worker_name: 'Sarah Tan', worker_avatar: 'https://randomuser.me/api/portraits/women/44.jpg', rating: 4.6, completed_gigs: 3, is_available: true, distance: '3.1km away' },
-    { id: 'backup-5', worker_name: 'Wilson Alvi', worker_avatar: 'https://randomuser.me/api/portraits/men/67.jpg', rating: 4.8, completed_gigs: 15, is_available: true, distance: '1.5km away' }
-  ];
-
   useEffect(() => {
     fetchBackupWorkers();
   }, []);
@@ -66,13 +57,14 @@ export default function BackupPoolWidget({ gigId, gigTitle, employerId, onWorker
         .select('*')
         .eq('is_available', true);
       
-      if (!error && data && data.length > 0) {
+      if (!error && data) {
         setBackupWorkers(data);
       } else {
-        setBackupWorkers(mockBackupWorkers);
+        setBackupWorkers([]);
       }
     } catch (err) {
-      setBackupWorkers(mockBackupWorkers);
+      console.error('Error fetching backup workers', err);
+      setBackupWorkers([]);
     } finally {
       setLoading(false);
     }
