@@ -99,7 +99,8 @@ export default function LoginPage({ onClose, defaultRole = 'worker', onLoginSucc
           available_days: availableDays,
           available_times: availableTimes,
           emergency_ready: emergencyReady,
-          emergency_radius_km: emergencyRadius ? parseInt(emergencyRadius) : null
+          emergency_radius_km: emergencyRadius ? parseInt(emergencyRadius) : null,
+          full_name: fullName
         };
         
         await signUpWithEmail(email, password, fullName, selectedRole, extraData);
