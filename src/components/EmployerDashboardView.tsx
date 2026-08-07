@@ -772,7 +772,7 @@ export default function EmployerDashboardView({ onNavigate, gigs, onAddGig, onLo
                 
                 <div className="bg-gradient-to-br from-secondary to-purple-600 p-6 rounded-2xl shadow-md text-white relative overflow-hidden">
                   <div className="absolute right-[-20px] top-[-20px] opacity-10">
-                    <Clock size={120} />
+                    <ClockIcon size={120} />
                   </div>
                   <h4 className="text-sm font-bold text-white/80 uppercase tracking-wider mb-2">Youth Training Hours</h4>
                   <div className="flex items-baseline gap-2">
