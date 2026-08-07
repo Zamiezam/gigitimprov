@@ -895,7 +895,8 @@ export default function EmployerDashboardView({ onNavigate, gigs, onAddGig, onLo
           )}
 
           {currentSubView === 'dashboard' && (
-            <div className="max-w-7xl mx-auto space-y-8">
+            <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+              
               {/* Toast */}
               <AnimatePresence>
                 {showSuccessToast && (
@@ -912,191 +913,137 @@ export default function EmployerDashboardView({ onNavigate, gigs, onAddGig, onLo
                 )}
               </AnimatePresence>
 
-              {/* Header */}
-              {/* Welcome Onboarding Banner */}
-              {myGigs.length === 0 && (
-                <div className="bg-gradient-to-br from-primary/10 via-primary/5 to-transparent border border-primary/20 rounded-2xl p-6 relative overflow-hidden">
-                  <div className="absolute top-0 right-0 w-40 h-40 bg-primary/10 rounded-full blur-3xl -mr-10 -mt-10"></div>
-                  <div className="relative z-10">
-                    <h2 className="font-display font-bold text-xl text-primary flex items-center gap-2">👋 Welcome to Employer Hub!</h2>
-                    <p className="text-sm text-on-surface-variant mt-2 max-w-xl leading-relaxed">
-                      Post campus job opportunities, review verified UMS student applicants, and manage your shifts — all in one place.
+              {/* Main Content (Left, 2 columns) */}
+              <div className="lg:col-span-2 space-y-6">
+                
+                {/* Contextual Header */}
+                <div className="bg-white p-6 rounded-2xl border border-outline-variant shadow-sm flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                  <div>
+                    <h1 className="font-display font-bold text-2xl text-on-surface">
+                      {getGreeting()}. Shift Status
+                    </h1>
+                    <p className="text-sm text-on-surface-variant mt-1">
+                      {filteredApplicants.length} Applicants for Active Opportunities
                     </p>
-                    <div className="mt-4 grid grid-cols-1 sm:grid-cols-3 gap-3">
-                      <div className="bg-white/80 rounded-xl p-3 border border-outline-variant">
-                        <span className="text-lg">1️⃣</span>
-                        <p className="text-xs font-bold text-on-surface mt-1">Post Opportunity</p>
-                        <p className="text-[10px] text-on-surface-variant">Click "Post New Opportunity" below</p>
-                      </div>
-                      <div className="bg-white/80 rounded-xl p-3 border border-outline-variant">
-                        <span className="text-lg">2️⃣</span>
-                        <p className="text-xs font-bold text-on-surface mt-1">Review Students</p>
-                        <p className="text-[10px] text-on-surface-variant">Students apply, you pick the best</p>
-                      </div>
-                      <div className="bg-white/80 rounded-xl p-3 border border-outline-variant">
-                        <span className="text-lg">3️⃣</span>
-                        <p className="text-xs font-bold text-on-surface mt-1">Track & Pay</p>
-                        <p className="text-[10px] text-on-surface-variant">Clock-in tracking & escrow payment</p>
-                      </div>
-                    </div>
                   </div>
-                </div>
-              )}
-
-              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                <div>
-                  <h1 className="font-display font-bold text-2xl md:text-3xl text-on-surface">{getGreeting()}</h1>
-                  <p className="text-sm text-on-surface-variant mt-1">
-                    {totalApplicants} total applicants • {currentActiveGigsCount} active opportunities
-                  </p>
-                </div>
-                <button onClick={() => setShowPostModal(true)} className="bg-primary text-white px-6 py-3 rounded-xl shadow-md font-bold hover:bg-primary/95 transition-all flex items-center gap-1.5">
-                  <Plus size={18} />
-                  <span>Post New Opportunity</span>
-                </button>
-              </div>
-
-              {/* Stats Cards */}
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                <div className="bg-white p-4 rounded-2xl border border-outline-variant">
-                  <p className="text-xs text-on-surface-variant">Active Gigs</p>
-                  <p className="text-2xl font-bold text-primary">{currentActiveGigsCount || 0}</p>
-                </div>
-                <div className="bg-white p-4 rounded-2xl border border-outline-variant">
-                  <p className="text-xs text-on-surface-variant">Total Applicants</p>
-                  <p className="text-2xl font-bold text-secondary">{totalApplicants}</p>
-                </div>
-                <div className="bg-white p-4 rounded-2xl border border-outline-variant">
-                  <p className="text-xs text-on-surface-variant">Pending Review</p>
-                  <p className="text-2xl font-bold text-amber-600">{pendingApplicants}</p>
-                </div>
-                <div className="bg-white p-4 rounded-2xl border border-outline-variant">
-                  <p className="text-xs text-on-surface-variant">Hired</p>
-                  <p className="text-2xl font-bold text-green-600">{applicants.filter(a => a.status === 'Hired').length}</p>
-                </div>
-              </div>
-
-              {/* AI Ranking Button */}
-              <div className="flex justify-end">
-                <button onClick={rankCandidatesWithAI} disabled={isAiRanking || applicants.length === 0}
-                  className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-purple-500 to-indigo-500 text-white rounded-xl font-semibold text-sm hover:opacity-90 transition-all disabled:opacity-50">
-                  {isAiRanking ? <Loader2 size={16} className="animate-spin" /> : <Bot size={16} />}
-                  {isAiRanking ? 'AI Analyzing...' : '🤖 AI Rank Candidates'}
-                </button>
-              </div>
-
-              {/* Filters */}
-              <div className="flex flex-col sm:flex-row gap-4 justify-between">
-                <div className="flex gap-2">
-                  <button onClick={() => setStatusFilter('all')} className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${statusFilter === 'all' ? 'bg-primary text-white' : 'bg-white border border-outline-variant'}`}>All</button>
-                  <button onClick={() => setStatusFilter('Pending')} className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${statusFilter === 'Pending' ? 'bg-primary text-white' : 'bg-white border border-outline-variant'}`}>Pending</button>
-                  <button onClick={() => setStatusFilter('Hired')} className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${statusFilter === 'Hired' ? 'bg-primary text-white' : 'bg-white border border-outline-variant'}`}>Hired</button>
-                </div>
-                <div className="flex gap-2">
-                  <div className="relative">
-                    <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant" />
-                    <input type="text" placeholder="Search applicants..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)}
-                      className="pl-9 pr-4 py-2 rounded-lg border border-outline-variant text-sm focus:outline-primary w-48" />
-                  </div>
-                  <button onClick={() => setSortBy(sortBy === 'rating' ? 'date' : 'rating')} className="px-4 py-2 bg-white border border-outline-variant rounded-lg text-sm font-medium flex items-center gap-1">
-                    <ArrowUpDown size={14} /> {sortBy === 'rating' ? 'By Rating' : 'By Date'}
+                  <button onClick={() => setShowPostModal(true)} className="bg-primary text-white px-5 py-2.5 rounded-xl shadow-md font-bold hover:bg-primary/95 transition-all flex items-center gap-2">
+                    <Plus size={18} />
+                    <span>Post New Gig</span>
                   </button>
                 </div>
-              </div>
 
-              {/* Applicants List */}
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <h3 className="font-display font-semibold text-lg text-on-surface">Applicants</h3>
-                  <span className="bg-secondary-container text-on-secondary-container px-3 py-1 rounded-full text-xs font-bold">{filteredApplicants.length} shown</span>
+                {/* Filters & Search */}
+                <div className="flex flex-col sm:flex-row gap-4 justify-between items-center">
+                  <div className="flex items-center gap-3 w-full sm:w-auto">
+                    <span className="font-display font-bold text-lg text-on-surface">Active Applicants</span>
+                    <span className="bg-amber-400 text-white text-[10px] uppercase tracking-wider font-bold px-2.5 py-1 rounded-full">{pendingApplicants} Pending</span>
+                  </div>
+
+                  <div className="flex gap-2 w-full sm:w-auto">
+                    <div className="relative flex-1 sm:flex-none">
+                      <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant" />
+                      <input 
+                        type="text" 
+                        placeholder="Search by name, skill..." 
+                        value={searchTerm} 
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        className="pl-9 pr-4 py-2 rounded-xl border border-outline-variant text-sm focus:outline-primary w-full sm:w-56 bg-white" 
+                      />
+                    </div>
+                    <select 
+                      value={statusFilter} 
+                      onChange={(e) => setStatusFilter(e.target.value as any)}
+                      className="px-3 py-2 bg-white border border-outline-variant rounded-xl text-sm font-medium focus:outline-primary"
+                    >
+                      <option value="all">All Status</option>
+                      <option value="Pending">Pending</option>
+                      <option value="Hired">Hired</option>
+                    </select>
+                  </div>
                 </div>
 
-                {loading ? (
-                  <div className="flex justify-center py-12"><Loader2 size={32} className="animate-spin text-primary" /></div>
-                ) : filteredApplicants.length === 0 ? (
-                  <div className="text-center py-12 bg-white rounded-2xl border border-outline-variant">
-                    <Users size={48} className="mx-auto text-on-surface-variant mb-3" />
-                    <p className="text-on-surface-variant">No applicants yet</p>
-                    <button onClick={() => setShowPostModal(true)} className="mt-3 text-primary font-semibold hover:underline">Post a gig →</button>
-                  </div>
-                ) : (
-                  filteredApplicants.map((applicant) => {
-                    const aiScore = getAiScore(applicant.id);
-                    return (
-                      <div 
-                        key={applicant.id} 
-                        onClick={() => {
-                          setSelectedWorkerProfile(applicant);
-                          setShowWorkerProfile(true);
-                        }}
-                        className="bg-white border border-outline-variant p-6 rounded-2xl shadow-sm hover:shadow-md transition-all relative cursor-pointer"
-                      >
-                        {applicant.status === 'Hired' && (
-                          <div className="absolute top-0 right-0 bg-green-600 text-white text-[10px] font-bold px-4 py-1 rounded-bl-xl flex items-center gap-1">
-                            <Check size={12} /> <span>Hired</span>
+                {/* Applicants List */}
+                <div className="space-y-4">
+                  {loading ? (
+                    <div className="flex justify-center py-12"><Loader2 size={32} className="animate-spin text-primary" /></div>
+                  ) : filteredApplicants.length === 0 ? (
+                    <div className="text-center py-12">
+                      <p className="text-on-surface-variant text-sm font-medium">No workers found.</p>
+                    </div>
+                  ) : (
+                    filteredApplicants.map((applicant) => {
+                      return (
+                        <div 
+                          key={applicant.id} 
+                          onClick={() => {
+                            setSelectedWorkerProfile(applicant);
+                            setShowWorkerProfile(true);
+                          }}
+                          className="bg-white border border-outline-variant p-6 rounded-2xl shadow-sm hover:shadow-md transition-all relative cursor-pointer"
+                        >
+                          {/* No-Show / Distance top right */}
+                          <div className="absolute top-6 right-6 text-right">
+                            <p className="text-error font-bold text-xs mb-1">No-Show: 0%</p>
+                            <p className="text-on-surface-variant text-[10px]">{applicant.distance}</p>
                           </div>
-                        )}
-                        {aiScore && (
-                          <div className="absolute top-0 left-0 bg-gradient-to-r from-purple-500 to-indigo-500 text-white text-[10px] font-bold px-3 py-1 rounded-br-xl flex items-center gap-1">
-                            <ThumbsUp size={10} /> AI Match: {aiScore}%
-                          </div>
-                        )}
-                        
-                        <div className="flex flex-col sm:flex-row items-start gap-4">
-                          <div className="w-16 h-16 rounded-xl overflow-hidden bg-surface border border-outline-variant flex-shrink-0">
-                            <img alt={applicant.name} className="w-full h-full object-cover" src={applicant.avatar} />
-                          </div>
-                          <div className="flex-1 w-full">
-                            <div className="flex justify-between items-start flex-wrap gap-2">
-                              <div>
-                                <h4 className="font-semibold text-on-surface text-base">{applicant.name}</h4>
-                                <div className="flex items-center gap-2 mt-1">
-                                  <span className="flex items-center gap-0.5 text-secondary font-bold text-xs">
-                                    <Star size={14} fill="currentColor" /> {applicant.rating.toFixed(1)}
-                                  </span>
-                                  <span className="text-outline-variant text-xs">•</span>
-                                  <span className="text-tertiary font-semibold text-xs flex items-center gap-0.5 bg-tertiary/10 px-2 py-0.5 rounded-full">
-                                    <Shield size={12} /> {applicant.badge}
-                                  </span>
-                                  {(applicant as any).income_classification && (
-                                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
-                                      (applicant as any).income_classification === 'B40' ? 'bg-blue-50 text-blue-700 border-blue-200' :
-                                      (applicant as any).income_classification === 'M40' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
-                                      'bg-amber-50 text-amber-700 border-amber-200'
-                                    }`}>
-                                      {(applicant as any).income_classification}
-                                    </span>
-                                  )}
-                                </div>
+
+                          <div className="flex items-start gap-4">
+                            <img alt={applicant.name} className="w-16 h-16 rounded-xl object-cover border border-outline-variant" src={applicant.avatar} />
+                            <div className="flex-1 pr-24">
+                              <h4 className="font-semibold text-on-surface text-lg">{applicant.name}</h4>
+                              <div className="flex items-center gap-2 mt-1 flex-wrap">
+                                <span className="flex items-center gap-1 text-secondary font-bold text-xs">
+                                  <Star size={14} fill="currentColor" /> {applicant.rating.toFixed(1)}/5.0
+                                </span>
+                                <span className="text-outline-variant">•</span>
+                                <span className="text-primary font-semibold text-xs flex items-center gap-1">
+                                  <Shield size={12} /> {applicant.badge}
+                                </span>
                               </div>
-                              <div className="text-right">
-                                <p className="text-on-surface-variant text-xs flex items-center gap-1"><MapPin size={12} /> {applicant.distance}</p>
-                              </div>
+                              <p className="mt-3 text-on-surface-variant text-xs leading-relaxed">{applicant.bio}</p>
                             </div>
-                            
-                            <p className="mt-3 text-on-surface-variant text-sm leading-relaxed">{applicant.bio}</p>
-                            
-                            <div className="mt-4 flex gap-3" onClick={(e) => e.stopPropagation()}>
-                              {applicant.status === 'Hired' ? (
-                                <button disabled className="flex-1 bg-green-50 text-green-600 py-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 border border-green-200">
-                                  <Check size={14} /> Hired
-                                </button>
-                              ) : (
-                                <button onClick={() => handleHire(applicant)} className="flex-1 bg-primary hover:bg-primary/95 text-white py-2.5 rounded-xl text-xs font-bold shadow-sm transition-all">
-                                  Hire Now
-                                </button>
-                              )}
-                              <button onClick={() => handleOpenChat(applicant)} className="flex-1 border border-primary text-primary hover:bg-primary/5 py-2.5 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5">
-                                <Send size={12} /> Message
+                          </div>
+
+                          <div className="mt-5 flex gap-3" onClick={(e) => e.stopPropagation()}>
+                            {applicant.status === 'Hired' ? (
+                              <button disabled className="flex-1 bg-green-50 text-green-600 py-2.5 rounded-xl text-sm font-bold border border-green-200">
+                                Hired
                               </button>
-                            </div>
+                            ) : (
+                              <button onClick={() => handleHire(applicant)} className="flex-1 bg-primary hover:bg-primary/95 text-white py-2.5 rounded-xl text-sm font-bold shadow-sm transition-all">
+                                Hire Now
+                              </button>
+                            )}
+                            <button onClick={() => handleOpenChat(applicant)} className="flex-1 border border-primary text-primary hover:bg-primary/5 py-2.5 rounded-xl text-sm font-bold transition-all">
+                              Message
+                            </button>
                           </div>
                         </div>
-                      </div>
-                    );
-                  })
-                )}
+                      );
+                    })
+                  )}
+                </div>
               </div>
+
+              {/* Right Sidebar (1 column) */}
+              <div className="space-y-6">
+                <BackupPoolWidget gigs={myGigs} />
+                
+                {/* Local Demand Insight */}
+                <div className="bg-white p-5 rounded-2xl border border-outline-variant shadow-sm">
+                  <h3 className="font-display font-semibold text-sm text-on-surface mb-4">Local Demand Insight</h3>
+                  <div className="flex items-center gap-3 mb-2">
+                    <div className="flex-1 h-2 bg-surface-container-highest rounded-full overflow-hidden">
+                      <div className="h-full bg-primary w-[85%] rounded-full"></div>
+                    </div>
+                    <span className="text-[10px] font-bold text-primary uppercase tracking-wider">High</span>
+                  </div>
+                  <p className="text-xs text-on-surface-variant leading-relaxed">
+                    Worker availability in your area is high this afternoon.
+                  </p>
+                </div>
+              </div>
+
             </div>
           )}
           {currentSubView === 'mygigs' && (
