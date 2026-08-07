@@ -22,7 +22,8 @@ import {
   Globe,
   Bell,
   CheckCircle,
-  CheckCircle2
+  CheckCircle2,
+  AlertCircle
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
@@ -325,19 +326,26 @@ export default function WorkerReliabilityView({ onNavigate, isEmbedded = false }
               
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 pt-4">
                 <div className="space-y-1">
-                  <h4 className="flex items-center gap-2 text-amber-400 font-bold text-sm">
-                    <CheckCircle2 size={16} /> Zero No-Shows
+                  <h4 className={`flex items-center gap-2 font-bold text-sm ${noShowCount === 0 ? 'text-amber-400' : 'text-red-400'}`}>
+                    {noShowCount === 0 ? <CheckCircle2 size={16} /> : <AlertCircle size={16} />} 
+                    {noShowCount === 0 ? 'Zero No-Shows' : `${noShowCount} No-Show${noShowCount > 1 ? 's' : ''} Recorded`}
                   </h4>
                   <p className="text-xs text-green-100/70 max-w-[200px] leading-relaxed">
-                    {workerName.split(' ')[0]} has never canceled a gig within 24 hours.
+                    {noShowCount === 0 
+                      ? `${workerName.split(' ')[0]} has never canceled a gig within 24 hours.`
+                      : `A no-show significantly impacts the reliability score and employer trust.`}
                   </p>
                 </div>
                 <div className="space-y-1">
                   <h4 className="flex items-center gap-2 text-amber-400 font-bold text-sm">
-                    <TrendingUp size={16} /> Top 5% Performer
+                    <TrendingUp size={16} /> {parseFloat(reliabilityScore) >= 4.5 ? 'Top 5% Performer' : parseFloat(reliabilityScore) >= 3.5 ? 'Solid Performer' : 'Building Reputation'}
                   </h4>
                   <p className="text-xs text-green-100/70 max-w-[200px] leading-relaxed">
-                    Ranked in the top tier of workers in Kota Kinabalu.
+                    {parseFloat(reliabilityScore) >= 4.5 
+                      ? 'Ranked in the top tier of workers in Kota Kinabalu.'
+                      : parseFloat(reliabilityScore) >= 3.5 
+                        ? 'Consistent and reliable for most tasks.' 
+                        : 'Currently working to improve their reliability stats.'}
                   </p>
                 </div>
               </div>

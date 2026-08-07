@@ -93,13 +93,43 @@ export default function WorkerBrowseView({
     history: [] as any[]
   });
 
-  // ── Fetch user profile ──────
+  const [dynamicReliability, setDynamicReliability] = useState<string | null>(null);
+
+  // ── Fetch user profile and compute reliability ──────
   useEffect(() => {
-    if (user) {
-      supabase.from('profiles').select('*').eq('id', user.id).single().then(({ data }) => {
-        if (data) setProfile(data);
-      });
+    if (!user) return;
+    async function loadProfileAndStats() {
+      const { data: profileData } = await supabase.from('profiles').select('*').eq('id', user.id).single();
+      if (profileData) setProfile(profileData);
+
+      const { data: historyData } = await supabase.from('hired_workers').select('*').eq('worker_id', user.id);
+      if (historyData) {
+        const ratedHistory = historyData.filter(item => item.rating_given);
+        const completed = historyData.filter(item => item.status === 'completed' || item.status === 'verified').length;
+        const noShows = historyData.filter(item => item.rating_given && item.rating <= 2).length;
+        const totalAttempts = completed + noShows;
+        const rate = totalAttempts > 0 ? Math.round((completed / totalAttempts) * 100) : 100;
+        
+        let skillsSum = 0, workEthicSum = 0, trustSum = 0, validRatedCount = 0;
+        ratedHistory.forEach(item => {
+          if (item.sweat_metrics) {
+            skillsSum += item.sweat_metrics.skills || item.rating || 5;
+            workEthicSum += item.sweat_metrics.work_ethic || item.rating || 5;
+            trustSum += item.sweat_metrics.trust || item.rating || 5;
+            validRatedCount++;
+          }
+        });
+        const avgSkills = validRatedCount > 0 ? (skillsSum / validRatedCount) : 5.0;
+        const avgWorkEthic = validRatedCount > 0 ? (workEthicSum / validRatedCount) : 5.0;
+        const avgTrust = validRatedCount > 0 ? (trustSum / validRatedCount) : 5.0;
+        const experienceScore = Math.min(5.0, 1.0 + (completed * 0.25)); 
+        const attendanceScore = rate / 20.0;
+        
+        const overall = (avgSkills + avgWorkEthic + experienceScore + attendanceScore + avgTrust) / 5;
+        setDynamicReliability(overall.toFixed(1));
+      }
     }
+    loadProfileAndStats();
   }, [user]);
 
   // ── Fetch active clocked in shifts ──────
@@ -379,7 +409,8 @@ export default function WorkerBrowseView({
   }, [isAvailable, user]);
 
   // ── JSS Score from reliability score ────────────────────────
-  const jssScore = Math.round(parseFloat(profile?.reliability_score || '4.8') * 20);
+  const currentReliability = dynamicReliability || profile?.reliability_score || '4.8';
+  const jssScore = Math.round(parseFloat(currentReliability) * 20);
 
   const workerName = profile?.full_name || user?.email?.split('@')[0] || 'Worker';
   const workerAvatar = profile?.avatar_url || 'https://randomuser.me/api/portraits/men/32.jpg';
@@ -449,14 +480,22 @@ export default function WorkerBrowseView({
             <div className="bg-amber-50 p-4 rounded-xl border border-amber-100">
               <div className="flex justify-between items-center mb-1.5">
                 <span className="text-[11px] text-amber-900 font-bold uppercase tracking-wider">Reliability Score</span>
-                <span className="text-sm font-black text-amber-900">4.8</span>
+                <span className="text-sm font-black text-amber-900">{currentReliability}</span>
               </div>
               <div className="w-full bg-amber-200 h-1.5 rounded-full overflow-hidden">
-                <div className="bg-amber-600 h-full rounded-full" style={{ width: '96%' }} />
+                <div className="bg-amber-600 h-full rounded-full transition-all duration-1000" style={{ width: `${(parseFloat(currentReliability) / 5) * 100}%` }} />
               </div>
               <div className="flex gap-1.5 mt-3">
-                <span className="text-[9px] bg-green-500 text-white px-2.5 py-0.5 rounded-full font-bold">Punctual</span>
-                <span className="text-[9px] bg-green-500 text-white px-2.5 py-0.5 rounded-full font-bold">Hardworking</span>
+                {parseFloat(currentReliability) >= 4.5 ? (
+                  <>
+                    <span className="text-[9px] bg-green-500 text-white px-2.5 py-0.5 rounded-full font-bold">Punctual</span>
+                    <span className="text-[9px] bg-green-500 text-white px-2.5 py-0.5 rounded-full font-bold">Hardworking</span>
+                  </>
+                ) : parseFloat(currentReliability) >= 3.5 ? (
+                  <span className="text-[9px] bg-blue-500 text-white px-2.5 py-0.5 rounded-full font-bold">Reliable</span>
+                ) : (
+                  <span className="text-[9px] bg-orange-500 text-white px-2.5 py-0.5 rounded-full font-bold">Building Trust</span>
+                )}
               </div>
             </div>
           </div>
