@@ -62,7 +62,7 @@ export default function HiringPortal({ myGigs }: HiringPortalProps) {
         return {
           id: p.id,
           full_name: p.full_name || 'Anonymous Student',
-          avatar_url: p.avatar_url || 'https://randomuser.me/api/portraits/men/32.jpg',
+          avatar_url: p.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(p.full_name || 'Worker')}&background=0D8ABC&color=fff`,
           university: p.university || 'UMS',
           bio: p.bio || '',
           skills: skills,

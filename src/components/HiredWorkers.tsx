@@ -367,7 +367,7 @@ export default function HiredWorkers() {
                 <div className="flex flex-col md:flex-row justify-between md:items-center gap-4">
                   <div className="flex items-center gap-4">
                     <img 
-                      src={worker.worker_avatar || `https://randomuser.me/api/portraits/${Math.random() > 0.5 ? 'men' : 'women'}/${Math.floor(Math.random() * 70)}.jpg`} 
+                      src={worker.worker_avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(worker.worker_name)}&background=0D8ABC&color=fff`} 
                       alt={worker.worker_name} 
                       className="w-14 h-14 rounded-full object-cover" 
                     />

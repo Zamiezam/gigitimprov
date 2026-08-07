@@ -60,14 +60,14 @@ export default function BackupPoolWidget({ gigId, gigTitle, employerId, onWorker
       
       if (!error && data) {
         // Map profile data to BackupWorker format
-        const mappedWorkers: BackupWorker[] = data.map((profile: any, index: number) => ({
+        const mappedWorkers: BackupWorker[] = data.map((profile: any) => ({
           id: profile.id,
           worker_name: profile.full_name || 'Worker',
-          worker_avatar: profile.avatar_url || `https://randomuser.me/api/portraits/${index % 2 === 0 ? 'men' : 'women'}/${index + 10}.jpg`,
-          rating: 4.5 + (Math.random() * 0.5), // Simulated ratings for visual effect since profiles might not have ratings yet
-          completed_gigs: Math.floor(Math.random() * 20) + 1, // Simulated past experience
+          worker_avatar: profile.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(profile.full_name || 'Worker')}&background=0D8ABC&color=fff`,
+          rating: profile.rating || 0,
+          completed_gigs: profile.completed_gigs || 0,
           is_available: true,
-          distance: `${(1.2 + index * 0.5).toFixed(1)}km away`
+          distance: profile.location ? `${profile.location}` : 'Location hidden'
         }));
         
         setBackupWorkers(mappedWorkers);
