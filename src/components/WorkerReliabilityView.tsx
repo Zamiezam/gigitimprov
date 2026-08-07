@@ -23,9 +23,12 @@ import {
   Bell,
   CheckCircle,
   CheckCircle2,
-  AlertCircle
+  AlertCircle,
+  Download,
+  FileText
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
+import { Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ResponsiveContainer } from 'recharts';
 
 interface WorkerReliabilityViewProps {
   onNavigate: (view: AppView) => void;
@@ -43,7 +46,7 @@ export default function WorkerReliabilityView({ onNavigate, isEmbedded = false }
   const [activeHistory, setActiveHistory] = useState<any[]>([]);
   const [noShowCount, setNoShowCount] = useState(0);
   const [completedShifts, setCompletedShifts] = useState(0);
-  const [reliabilityScore, setReliabilityScore] = useState('5.0');
+  const [reliabilityScore, setReliabilityScore] = useState('5.00');
   const [attendanceRate, setAttendanceRate] = useState(100);
 
   // SWEAT Pillars
@@ -56,6 +59,8 @@ export default function WorkerReliabilityView({ onNavigate, isEmbedded = false }
   // States
   const [isBackupReady, setIsBackupReady] = useState(true);
   const [showToastMessage, setShowToastMessage] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<'profile' | 'passport' | 'history'>('passport');
+  const [badges, setBadges] = useState<any[]>([]);
 
   useEffect(() => {
     if (user) {
@@ -141,7 +146,35 @@ export default function WorkerReliabilityView({ onNavigate, isEmbedded = false }
 
         // Overall SWEAT score
         const overall = (avgSkills + avgWorkEthic + experienceScore + attendanceScore + avgTrust) / 5;
-        setReliabilityScore(overall.toFixed(1));
+        setReliabilityScore(overall.toFixed(2));
+
+        // Derive Badges
+        let fbCount = 0;
+        let eventCount = 0;
+        let logisticsCount = 0;
+        
+        historyData.forEach(item => {
+          const t = (item.gig_title || '').toLowerCase();
+          const c = (item.gig_category || '').toLowerCase();
+          
+          if (t.includes('waiter') || t.includes('cafe') || t.includes('barista') || t.includes('food') || c.includes('f&b')) {
+            fbCount++;
+          } else if (t.includes('event') || t.includes('usher') || t.includes('booth') || c.includes('event')) {
+            eventCount++;
+          } else if (t.includes('delivery') || t.includes('warehouse') || t.includes('packer') || c.includes('logistics')) {
+            logisticsCount++;
+          }
+        });
+
+        const derivedBadges = [];
+        if (fbCount > 0) derivedBadges.push({ id: 'fb', icon: 'coffee', name: 'F&B Crew', level: Math.min(3, Math.ceil(fbCount / 2)) });
+        if (eventCount > 0) derivedBadges.push({ id: 'event', icon: 'confirmation_number', name: 'Event Assistant', level: Math.min(3, Math.ceil(eventCount / 2)) });
+        if (logisticsCount > 0) derivedBadges.push({ id: 'logistics', icon: 'local_shipping', name: 'Logistics Pro', level: Math.min(3, Math.ceil(logisticsCount / 2)) });
+        
+        if (rate >= 95 && completed > 0) derivedBadges.push({ id: 'reliable', icon: 'verified_user', name: 'Reliable', level: 3 });
+        if (avgTrust >= 4.5 && completed > 0) derivedBadges.push({ id: 'team', icon: 'group', name: 'Team Player', level: 3 });
+
+        setBadges(derivedBadges);
       }
     } catch (err) {
       console.error('Error loading reliability profile:', err);
@@ -167,7 +200,7 @@ export default function WorkerReliabilityView({ onNavigate, isEmbedded = false }
   }
 
   const workerName = profile?.full_name || user?.email?.split('@')[0] || 'Worker';
-  const workerAvatar = profile?.avatar_url || 'https://randomuser.me/api/portraits/men/32.jpg';
+  const workerAvatar = profile?.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(workerName)}&background=0D8ABC&color=fff`;
   const workerUniversity = profile?.university || 'University Student';
 
   return (
@@ -177,7 +210,7 @@ export default function WorkerReliabilityView({ onNavigate, isEmbedded = false }
       {!isEmbedded && (
         <header className="fixed top-0 left-0 w-full z-50 flex justify-between items-center px-4 md:px-8 h-16 bg-surface border-b border-outline-variant shadow-xs">
           <div className="flex items-center gap-2 cursor-pointer" onClick={() => onNavigate(AppView.Landing)}>
-            <span className="font-display font-black text-2xl text-primary tracking-tight">SabahGig</span>
+            <span className="font-display font-black text-2xl text-primary tracking-tight">GigIT</span>
           </div>
 
           <div className="hidden lg:flex items-center gap-8">
@@ -214,7 +247,7 @@ export default function WorkerReliabilityView({ onNavigate, isEmbedded = false }
           <nav className="flex-1 space-y-1 mb-6">
             {[
               { id: 'Dashboard',      icon: 'dashboard',      label: 'Dashboard'      },
-              { id: 'MyReliability',  icon: 'verified_user',  label: 'My Reliability' },
+              { id: 'MyReliability',  icon: 'verified_user',  label: 'My Profile ID' },
               { id: 'ActiveGigs',     icon: 'work',           label: 'Active Gigs'    },
               { id: 'Earnings',       icon: 'payments',       label: 'Earnings'       },
             ].map(({ id, icon, label }) => (
@@ -248,187 +281,216 @@ export default function WorkerReliabilityView({ onNavigate, isEmbedded = false }
 
       {/* Main Content Area */}
       <main className={`flex-1 ${isEmbedded ? '' : 'md:ml-64 pt-24 px-6 md:px-10 pb-20'}`}>
-        <div className="max-w-5xl mx-auto space-y-6">
+        <div className="max-w-md mx-auto relative mt-4 mb-16">
           
-          {/* Top Row Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
-            {/* Profile Card */}
-            <div className="md:col-span-8 bg-white rounded-2xl border border-outline-variant p-6 shadow-sm flex flex-col sm:flex-row gap-6 items-start">
-              <div className="relative flex-shrink-0">
-                <img src={workerAvatar} alt={workerName} className="w-32 h-32 rounded-xl object-cover border border-outline-variant shadow-sm" />
-                <div className="absolute -bottom-2 -right-2 bg-green-600 text-white p-1 rounded-md border-2 border-white shadow-sm">
-                  <ShieldCheck size={14} />
-                </div>
-              </div>
-              <div className="space-y-3">
-                <div className="flex flex-wrap items-center gap-3">
-                  <h1 className="font-display font-bold text-2xl text-on-surface">{workerName}</h1>
-                  <span className="bg-green-100 text-green-800 text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1 border border-green-200">
-                    <Award size={10} /> Verified UMS Student
-                  </span>
-                </div>
-                <p className="text-sm text-on-surface-variant leading-relaxed font-medium">
-                  {profile?.bio || `Student at Universiti Malaysia Sabah. Specialized in event support and local delivery tasks. Known for punctuality and quick learning.`}
-                </p>
-                <div className="flex flex-wrap gap-2 pt-1">
-                  <span className="flex items-center gap-1 text-[10px] bg-surface-container font-semibold px-2 py-1 rounded-md text-on-surface-variant border border-outline-variant/50">
-                    <MapPin size={12} /> {profile?.location || 'Sepanggar, KK'}
-                  </span>
-                  <span className="flex items-center gap-1 text-[10px] bg-surface-container font-semibold px-2 py-1 rounded-md text-on-surface-variant border border-outline-variant/50">
-                    <Globe size={12} /> Malay, English
-                  </span>
-                  <span className="flex items-center gap-1 text-[10px] bg-surface-container font-semibold px-2 py-1 rounded-md text-on-surface-variant border border-outline-variant/50">
-                    <Calendar size={12} /> Member since Jan 2024
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            {/* Stats Cards */}
-            <div className="md:col-span-4 grid grid-cols-2 gap-4">
-              <div className="bg-primary rounded-2xl p-4 text-white shadow-sm flex flex-col justify-center items-center text-center relative overflow-hidden">
-                <div className="absolute top-0 right-0 p-3 opacity-20"><Award size={48} /></div>
-                <span className="text-4xl font-black relative z-10">{completedShifts}</span>
-                <span className="text-xs font-bold text-white/80 mt-1 relative z-10">Gigs Done</span>
-              </div>
-              <div className="bg-secondary rounded-2xl p-4 text-white shadow-sm flex flex-col justify-center items-center text-center relative overflow-hidden">
-                <div className="absolute top-0 right-0 p-3 opacity-20"><Star size={48} /></div>
-                <span className="text-4xl font-black relative z-10 flex items-center gap-1">
-                  {parseFloat(reliabilityScore) >= 4.5 ? 4.9 : parseFloat(reliabilityScore).toFixed(1)} <Star size={20} fill="currentColor" />
-                </span>
-                <span className="text-xs font-bold text-white/80 mt-1 relative z-10">Avg Rating</span>
-              </div>
-              <div className="col-span-2 bg-white rounded-2xl border border-outline-variant p-4 shadow-sm flex items-center gap-4">
-                <div className="w-12 h-12 bg-green-50 rounded-xl flex items-center justify-center border border-green-100 flex-shrink-0">
-                  <CheckCircle className="text-green-600" size={24} />
-                </div>
-                <div>
-                  <h3 className="font-black text-2xl text-on-surface leading-none">{attendanceRate}%</h3>
-                  <p className="text-xs font-semibold text-on-surface-variant mt-1">Attendance Rate</p>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* The Reliability Proof Card */}
-          <div className="bg-[#0f2e26] rounded-3xl p-8 md:p-10 shadow-lg relative overflow-hidden text-white flex flex-col md:flex-row justify-between items-center gap-10">
-            <div className="absolute inset-0 opacity-10 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-green-300 via-transparent to-transparent z-0"></div>
+          {/* Digital Profile Card / ID Concept */}
+          <div className="bg-white rounded-[2.5rem] shadow-[0_20px_50px_rgba(0,0,0,0.1)] border-8 border-surface-container-lowest overflow-hidden flex flex-col relative min-h-[800px]">
             
-            <div className="flex-1 relative z-10 space-y-6">
-              <div className="inline-flex items-center gap-2 border border-green-500/30 bg-green-900/30 px-3 py-1.5 rounded-full text-green-300 text-xs font-bold uppercase tracking-wider">
-                <ShieldCheck size={14} /> The Reliability Proof
+            {/* Header / ID Top */}
+            <div className="bg-gradient-to-b from-[#0f4a42] to-primary text-white p-8 pt-10 pb-24 relative rounded-b-[3rem]">
+              <div className="absolute top-0 right-0 w-full h-full overflow-hidden rounded-b-[3rem]">
+                <div className="absolute -right-20 -top-20 w-64 h-64 bg-white opacity-5 rounded-full blur-3xl"></div>
+                <div className="absolute -left-10 bottom-10 w-40 h-40 bg-secondary opacity-20 rounded-full blur-2xl"></div>
               </div>
               
-              <h2 className="font-display text-2xl md:text-3xl font-bold">Why employers trust {workerName.split(' ')[0]}</h2>
-              <p className="text-green-100/80 text-sm leading-relaxed max-w-lg">
-                Our proprietary Reliability Score combines attendance, promptness, and peer-reviewed task quality. Students with a score above 90% typically earn <span className="font-bold text-green-300">15% more per hour</span> due to high employer demand.
-              </p>
-              
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 pt-4">
-                <div className="space-y-1">
-                  <h4 className={`flex items-center gap-2 font-bold text-sm ${noShowCount === 0 ? 'text-amber-400' : 'text-red-400'}`}>
-                    {noShowCount === 0 ? <CheckCircle2 size={16} /> : <AlertCircle size={16} />} 
-                    {noShowCount === 0 ? 'Zero No-Shows' : `${noShowCount} No-Show${noShowCount > 1 ? 's' : ''} Recorded`}
-                  </h4>
-                  <p className="text-xs text-green-100/70 max-w-[200px] leading-relaxed">
-                    {noShowCount === 0 
-                      ? `${workerName.split(' ')[0]} has never canceled a gig within 24 hours.`
-                      : `A no-show significantly impacts the reliability score and employer trust.`}
-                  </p>
+              <div className="relative z-10 flex flex-col items-center text-center">
+                <div className="flex items-center gap-2 mb-6">
+                  <div className="w-8 h-8 rounded bg-white text-primary flex items-center justify-center font-black text-xl">G</div>
+                  <span className="font-display font-black tracking-widest text-lg">GIGIT</span>
                 </div>
-                <div className="space-y-1">
-                  <h4 className="flex items-center gap-2 text-amber-400 font-bold text-sm">
-                    <TrendingUp size={16} /> {parseFloat(reliabilityScore) >= 4.5 ? 'Top 5% Performer' : parseFloat(reliabilityScore) >= 3.5 ? 'Solid Performer' : 'Building Reputation'}
-                  </h4>
-                  <p className="text-xs text-green-100/70 max-w-[200px] leading-relaxed">
-                    {parseFloat(reliabilityScore) >= 4.5 
-                      ? 'Ranked in the top tier of workers in Kota Kinabalu.'
-                      : parseFloat(reliabilityScore) >= 3.5 
-                        ? 'Consistent and reliable for most tasks.' 
-                        : 'Currently working to improve their reliability stats.'}
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            <div className="relative z-10 bg-black/20 p-8 rounded-3xl border border-white/10 flex flex-col items-center justify-center min-w-[240px]">
-              <span className="text-xs text-green-100/80 font-bold mb-4 tracking-wider">Reliability Score</span>
-              
-              <div className="relative w-32 h-32 flex items-center justify-center">
-                <svg className="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
-                  <circle cx="50" cy="50" r="45" fill="none" stroke="rgba(255,255,255,0.1)" strokeWidth="8" />
-                  <circle cx="50" cy="50" r="45" fill="none" stroke="#2dd4bf" strokeWidth="8" strokeDasharray="282.7" strokeDashoffset={282.7 - (282.7 * (parseFloat(reliabilityScore)*20)) / 100} className="transition-all duration-1000 ease-out" strokeLinecap="round" />
-                </svg>
-                <div className="absolute inset-0 flex items-center justify-center flex-col">
-                  <span className="text-4xl font-black text-white">{Math.round(parseFloat(reliabilityScore)*20)}</span>
-                </div>
-              </div>
-
-              <div className="mt-5 border border-green-500/50 bg-green-900/50 text-green-300 text-xs font-bold px-4 py-1.5 rounded-full">
-                {parseFloat(reliabilityScore) >= 4.5 ? 'Elite Status' : 'Good Status'}
-              </div>
-            </div>
-          </div>
-
-          {/* Verified Work History */}
-          <div className="space-y-4 pt-4">
-            <div className="flex justify-between items-end">
-              <div>
-                <h3 className="font-display font-bold text-xl text-on-surface">Verified Work History</h3>
-                <p className="text-sm text-on-surface-variant mt-1">Real reviews from local businesses in Sabah</p>
-              </div>
-              <button className="text-primary font-bold text-sm hover:underline">View All Gigs</button>
-            </div>
-
-            <div className="space-y-4">
-              {activeHistory.filter(item => item.rating_given).length === 0 ? (
-                <div className="bg-white border border-outline-variant rounded-2xl p-6 flex flex-col md:flex-row gap-4 justify-between items-start">
-                  <div className="flex gap-4">
-                    <div className="w-12 h-12 rounded-xl bg-surface-container flex items-center justify-center text-on-surface-variant flex-shrink-0">
-                      <span className="material-symbols-outlined">storefront</span>
-                    </div>
-                    <div>
-                      <h4 className="font-bold text-base text-on-surface">Kopi & Friends (Likas)</h4>
-                      <p className="text-sm text-on-surface-variant italic mt-1 font-medium">"{workerName.split(' ')[0]} was incredibly fast at clearing tables during our Sunday rush. Showed up 10 mins early."</p>
-                      <div className="flex gap-2 mt-3">
-                        <span className="text-[10px] font-bold bg-surface-container text-on-surface-variant px-2 py-1 rounded">Event Support</span>
-                        <span className="text-[10px] font-bold bg-surface-container text-on-surface-variant px-2 py-1 rounded">4 Hours</span>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="flex flex-col items-end gap-1">
-                    <div className="flex text-secondary"><Star size={14} fill="currentColor"/><Star size={14} fill="currentColor"/><Star size={14} fill="currentColor"/><Star size={14} fill="currentColor"/><Star size={14} fill="currentColor"/></div>
-                    <span className="text-xs text-on-surface-variant font-medium">May 12, 2024</span>
+                
+                <div className="relative mb-4">
+                  <img src={workerAvatar} alt={workerName} className="w-28 h-28 rounded-full object-cover border-4 border-white shadow-lg bg-white" />
+                  <div className="absolute -bottom-3 left-1/2 transform -translate-x-1/2 bg-white text-green-700 text-[10px] font-black px-3 py-1 rounded-full shadow-md whitespace-nowrap flex items-center gap-1 border border-green-100">
+                    <ShieldCheck size={12} className="text-green-600" /> Verified Student
                   </div>
                 </div>
-              ) : (
-                activeHistory.filter(item => item.rating_given).map(item => (
-                  <div key={item.id} className="bg-white border border-outline-variant rounded-2xl p-6 flex flex-col md:flex-row gap-4 justify-between items-start">
-                    <div className="flex gap-4">
-                      <div className="w-12 h-12 rounded-xl bg-surface-container flex items-center justify-center text-on-surface-variant flex-shrink-0">
-                        <span className="material-symbols-outlined">
-                          {item.gig_title.toLowerCase().includes('delivery') ? 'local_shipping' : 'storefront'}
-                        </span>
-                      </div>
-                      <div>
-                        <h4 className="font-bold text-base text-on-surface">{item.employer_name || 'Local SME'}</h4>
-                        <p className="text-sm text-on-surface-variant italic mt-1 font-medium">"{item.review || 'Great communication. Delivered all items carefully and followed safety protocols.'}"</p>
-                        <div className="flex gap-2 mt-3">
-                          <span className="text-[10px] font-bold bg-surface-container text-on-surface-variant px-2 py-1 rounded">{item.gig_title}</span>
-                        </div>
-                      </div>
+                
+                <h1 className="font-display font-bold text-2xl mt-4 tracking-tight">{workerName.toUpperCase()}</h1>
+                <p className="text-white/80 text-sm font-medium mt-1 tracking-wide">{workerUniversity}</p>
+              </div>
+            </div>
+
+            {/* Score & Stats Card (Overlapping) */}
+            <div className="relative z-20 -mt-16 mx-6 bg-white rounded-3xl shadow-xl border border-outline-variant/50 p-6 flex flex-col items-center">
+              <h3 className="text-[10px] font-black text-on-surface-variant uppercase tracking-widest mb-2">SWEAT™ Trust Score</h3>
+              
+              <div className="flex items-baseline gap-1 mb-1">
+                <span className="text-5xl font-black text-on-surface tracking-tighter">{parseFloat(reliabilityScore).toFixed(2)}</span>
+                <span className="text-lg font-bold text-on-surface-variant">/5.00</span>
+              </div>
+              
+              <div className="flex text-amber-400 gap-1 mb-2">
+                {[1,2,3,4,5].map((star) => (
+                  <Star key={star} size={20} fill={star <= Math.round(parseFloat(reliabilityScore)) ? "currentColor" : "none"} className={star <= Math.round(parseFloat(reliabilityScore)) ? "" : "text-outline-variant"} />
+                ))}
+              </div>
+              
+              {(() => {
+                const score = parseFloat(reliabilityScore);
+                let desc = "Needs Improvement";
+                let color = "text-error bg-error-container/30";
+                if (score >= 4.5) { desc = "Excellent"; color = "text-green-700 bg-green-100"; }
+                else if (score >= 3.5) { desc = "Good"; color = "text-blue-700 bg-blue-100"; }
+                else if (score >= 2.5) { desc = "Average"; color = "text-amber-700 bg-amber-100"; }
+                
+                return (
+                  <span className={`text-xs font-bold px-3 py-1 rounded-full mt-1 ${color}`}>
+                    {desc}
+                  </span>
+                );
+              })()}
+
+              {/* Mini Stats Row */}
+              <div className="w-full grid grid-cols-3 gap-2 mt-6 pt-6 border-t border-outline-variant/50">
+                <div className="flex flex-col items-center text-center">
+                  <span className="text-xl font-black text-on-surface">{completedShifts}</span>
+                  <span className="text-[9px] font-bold text-on-surface-variant uppercase mt-1">Completed Gigs</span>
+                </div>
+                <div className="flex flex-col items-center text-center border-x border-outline-variant/50">
+                  <span className="text-xl font-black text-on-surface">{attendanceRate}%</span>
+                  <span className="text-[9px] font-bold text-on-surface-variant uppercase mt-1">Attendance</span>
+                </div>
+                <div className="flex flex-col items-center text-center">
+                  <span className="text-xl font-black text-on-surface">{activeHistory.filter(i => i.rating_given).length}</span>
+                  <span className="text-[9px] font-bold text-on-surface-variant uppercase mt-1">Endorsements</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex gap-4 px-6 mt-6">
+              <button className="flex-1 py-3 rounded-xl border-2 border-primary text-primary font-bold text-sm hover:bg-primary/5 transition-colors cursor-pointer">
+                View Resume
+              </button>
+              <button className="flex-1 py-3 rounded-xl bg-primary text-white font-bold text-sm hover:bg-primary/90 transition-colors shadow-md flex items-center justify-center gap-2 cursor-pointer">
+                <Download size={16} /> Download PDF
+              </button>
+            </div>
+
+            {/* Tabs */}
+            <div className="flex mt-8 px-6 border-b border-outline-variant">
+              {[
+                { id: 'profile', label: 'Profile' },
+                { id: 'passport', label: 'Skills Passport' },
+                { id: 'history', label: 'Work History' }
+              ].map(tab => (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id as any)}
+                  className={`flex-1 pb-3 text-xs font-bold uppercase tracking-wide transition-colors relative cursor-pointer ${activeTab === tab.id ? 'text-primary' : 'text-on-surface-variant hover:text-on-surface'}`}
+                >
+                  {tab.label}
+                  {activeTab === tab.id && (
+                    <motion.div layoutId="activetab" className="absolute bottom-0 left-0 w-full h-0.5 bg-primary rounded-t-full" />
+                  )}
+                </button>
+              ))}
+            </div>
+
+            {/* Tab Content */}
+            <div className="p-6 flex-1 bg-surface-container-lowest">
+              
+              {activeTab === 'profile' && (
+                <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4">
+                  <div>
+                    <h4 className="text-[10px] font-black text-on-surface-variant uppercase tracking-wider mb-2">About</h4>
+                    <p className="text-sm text-on-surface leading-relaxed font-medium">
+                      {profile?.bio || 'Student at Universiti Malaysia Sabah. Specialized in event support and local delivery tasks. Known for punctuality and quick learning.'}
+                    </p>
+                  </div>
+                  <div>
+                    <h4 className="text-[10px] font-black text-on-surface-variant uppercase tracking-wider mb-2">Details</h4>
+                    <div className="space-y-3">
+                      <div className="flex items-center gap-3 text-sm font-medium text-on-surface"><MapPin size={16} className="text-primary"/> {profile?.location || 'Sepanggar, KK'}</div>
+                      <div className="flex items-center gap-3 text-sm font-medium text-on-surface"><Globe size={16} className="text-primary"/> Malay, English</div>
+                      <div className="flex items-center gap-3 text-sm font-medium text-on-surface"><Calendar size={16} className="text-primary"/> Member since Jan 2024</div>
                     </div>
-                    <div className="flex flex-col items-end gap-1">
-                      <div className="flex text-secondary">
-                        {[...Array(5)].map((_, i) => (
-                          <Star key={i} size={14} fill={i < item.rating ? "currentColor" : "none"} className={i < item.rating ? 'text-secondary' : 'text-outline-variant'} />
+                  </div>
+                </div>
+              )}
+
+              {activeTab === 'passport' && (
+                <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4">
+                  {/* Radar Chart Section */}
+                  <div>
+                    <h4 className="text-[10px] font-black text-on-surface-variant uppercase tracking-wider mb-4 text-center">SWEAT™ Breakdown</h4>
+                    <div className="h-64 w-full -ml-2">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <RadarChart cx="50%" cy="50%" outerRadius="70%" data={[
+                          { subject: 'Skills', A: sweatSkills, fullMark: 5 },
+                          { subject: 'Work Ethic', A: sweatWorkEthic, fullMark: 5 },
+                          { subject: 'Experience', A: sweatExperience, fullMark: 5 },
+                          { subject: 'Attendance', A: sweatAttendance, fullMark: 5 },
+                          { subject: 'Trust', A: sweatTrust, fullMark: 5 },
+                        ]}>
+                          <PolarGrid stroke="#e2e8f0" />
+                          <PolarAngleAxis dataKey="subject" tick={{ fill: '#0f4a42', fontSize: 10, fontWeight: 'bold' }} />
+                          <PolarRadiusAxis angle={90} domain={[0, 5]} tick={{ fontSize: 9 }} tickCount={6} />
+                          <Radar name={workerName} dataKey="A" stroke="#0f4a42" fill="#0f4a42" fillOpacity={0.5} />
+                        </RadarChart>
+                      </ResponsiveContainer>
+                    </div>
+                  </div>
+
+                  {/* Badges Section */}
+                  <div>
+                    <h4 className="text-[10px] font-black text-on-surface-variant uppercase tracking-wider mb-4 border-t border-outline-variant pt-6 text-center">Badges & Achievements</h4>
+                    {badges.length > 0 ? (
+                      <div className="grid grid-cols-3 gap-4">
+                        {badges.map((badge, idx) => (
+                          <div key={idx} className="flex flex-col items-center text-center">
+                            <div className="w-14 h-14 rounded-2xl bg-[#0f4a42]/10 border border-[#0f4a42]/20 flex items-center justify-center text-[#0f4a42] shadow-sm mb-2">
+                              <span className="material-symbols-outlined text-[28px]">{badge.icon}</span>
+                            </div>
+                            <span className="text-[10px] font-bold text-on-surface leading-tight">{badge.name}</span>
+                            <span className="text-[9px] font-medium text-on-surface-variant mt-0.5">Level {badge.level}</span>
+                          </div>
                         ))}
                       </div>
-                      <span className="text-xs text-on-surface-variant font-medium">{new Date(item.created_at).toLocaleDateString()}</span>
-                    </div>
+                    ) : (
+                      <div className="text-center py-6 bg-surface-container-lowest rounded-xl border border-dashed border-outline-variant">
+                        <Award className="mx-auto text-outline-variant mb-2" size={24} />
+                        <p className="text-xs text-on-surface-variant font-medium">Complete gigs to earn badges!</p>
+                      </div>
+                    )}
                   </div>
-                ))
+                </div>
               )}
+
+              {activeTab === 'history' && (
+                <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4">
+                  {activeHistory.filter(item => item.rating_given).length === 0 ? (
+                    <div className="text-center py-8">
+                      <p className="text-sm text-on-surface-variant font-medium">No verified work history yet.</p>
+                    </div>
+                  ) : (
+                    activeHistory.filter(item => item.rating_given).map(item => (
+                      <div key={item.id} className="bg-white border border-outline-variant rounded-xl p-4 flex gap-4 items-start shadow-sm">
+                        <div className="w-10 h-10 rounded-lg bg-surface-container flex items-center justify-center text-primary flex-shrink-0">
+                          <span className="material-symbols-outlined text-[20px]">
+                            {item.gig_title.toLowerCase().includes('delivery') ? 'local_shipping' : 'storefront'}
+                          </span>
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <h4 className="font-bold text-sm text-on-surface truncate">{item.employer_name || 'Local SME'}</h4>
+                          <p className="text-[10px] font-bold text-primary truncate">{item.gig_title}</p>
+                          <p className="text-xs text-on-surface-variant italic mt-1.5 font-medium line-clamp-2">"{item.review || 'Great communication. Delivered all items carefully and followed safety protocols.'}"</p>
+                          <div className="flex justify-between items-center mt-2 pt-2 border-t border-outline-variant/50">
+                            <div className="flex text-amber-400">
+                              {[...Array(5)].map((_, i) => (
+                                <Star key={i} size={12} fill={i < item.rating ? "currentColor" : "none"} className={i < item.rating ? 'text-amber-400' : 'text-outline-variant'} />
+                              ))}
+                            </div>
+                            <span className="text-[10px] text-on-surface-variant font-medium">{new Date(item.created_at).toLocaleDateString()}</span>
+                          </div>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              )}
+
             </div>
           </div>
         </div>
