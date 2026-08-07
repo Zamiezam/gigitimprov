@@ -319,12 +319,18 @@ export default function WorkerBrowseView({
 
       let { error: appErr } = await supabase.from('applicants').insert(applicantPayload);
 
-      if (appErr && appErr.code === 'PGRST204') {
-        // Fallback: remove cover_letter and created_at if they don't exist
-        delete applicantPayload.cover_letter;
-        delete applicantPayload.created_at;
-        const retry = await supabase.from('applicants').insert(applicantPayload);
-        appErr = retry.error;
+      // Dynamic fallback: keep stripping missing columns until it works
+      let retries = 0;
+      while (appErr && appErr.code === 'PGRST204' && retries < 10) {
+        const match = appErr.message?.match(/Could not find the '([^']+)' column/);
+        if (match && match[1]) {
+          delete applicantPayload[match[1]];
+          const retry = await supabase.from('applicants').insert(applicantPayload);
+          appErr = retry.error;
+          retries++;
+        } else {
+          break;
+        }
       }
 
       if (appErr) throw appErr;
@@ -351,12 +357,18 @@ export default function WorkerBrowseView({
 
         let { error: hireErr } = await supabase.from('hired_workers').insert(hirePayload);
 
-        if (hireErr && hireErr.code === 'PGRST204') {
-           // Fallback: remove timestamp columns
-           delete hirePayload.created_at;
-           delete hirePayload.updated_at;
-           const retry = await supabase.from('hired_workers').insert(hirePayload);
-           hireErr = retry.error;
+        // Dynamic fallback for hired_workers
+        let hireRetries = 0;
+        while (hireErr && hireErr.code === 'PGRST204' && hireRetries < 15) {
+          const match = hireErr.message?.match(/Could not find the '([^']+)' column/);
+          if (match && match[1]) {
+            delete hirePayload[match[1]];
+            const retry = await supabase.from('hired_workers').insert(hirePayload);
+            hireErr = retry.error;
+            hireRetries++;
+          } else {
+            break;
+          }
         }
 
         if (hireErr) throw hireErr;
