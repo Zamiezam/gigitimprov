@@ -104,6 +104,7 @@ export default function NFCScannerWidget({ onScan, className = '' }: NFCScannerW
                 const hexUID = parts
                   .map(p => p.replace('0x', '').trim())
                   .filter(p => p.length > 0)
+                  .map(p => p.padStart(2, '0'))
                   .join('')
                   .toUpperCase();
                   
