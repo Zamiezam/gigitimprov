@@ -7,6 +7,7 @@ import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import L from 'leaflet';
 import ClockInOut from './ClockInOut';
 import WorkerProfileSettings from './WorkerProfileSettings';
+import ResumeBuilderView from './ResumeBuilderView';
 import WorkerApplicationsTab from './WorkerApplicationsTab';
 import EmployerInsightsModal from './EmployerInsightsModal';
 import JSSBadge from './JSSBadge';
@@ -511,6 +512,7 @@ export default function WorkerBrowseView({
           <nav className="flex-1 space-y-1 mb-6">
             {[
               { id: 'Dashboard',      icon: 'dashboard',      label: 'Dashboard'      },
+              { id: 'ResumeBuilder',  icon: 'description',    label: 'Resume Builder' },
               { id: 'MyApplications', icon: 'work',           label: 'Active Gigs'    },
               { id: 'Earnings',       icon: 'payments',       label: 'Earnings'       },
               { id: 'Support',        icon: 'support_agent',  label: 'Support'        },
@@ -932,6 +934,13 @@ export default function WorkerBrowseView({
           {activeTab === 'Profile' && (
             <div className="max-w-7xl mx-auto px-4 md:px-8 mt-4">
               <WorkerProfileSettings />
+            </div>
+          )}
+
+          {/* ── TAB: Resume Builder ────────────────────────────────────────── */}
+          {activeTab === 'ResumeBuilder' && (
+            <div className="max-w-7xl mx-auto px-4 md:px-8 mt-4">
+              <ResumeBuilderView onBack={() => setActiveTab('Dashboard')} />
             </div>
           )}
 
