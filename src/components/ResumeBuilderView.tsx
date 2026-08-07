@@ -10,8 +10,7 @@ interface ResumeBuilderProps {
 }
 
 export default function ResumeBuilderView({ onBack }: ResumeBuilderProps) {
-  const { user } = useAuth();
-  const [profile, setProfile] = useState<any>(null);
+  const { user, profile } = useAuth();
   const [history, setHistory] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
@@ -24,10 +23,8 @@ export default function ResumeBuilderView({ onBack }: ResumeBuilderProps) {
   const loadData = async () => {
     setLoading(true);
     try {
-      const { data: profileData } = await supabase.from('profiles').select('*').eq('id', user?.id).single();
       const { data: historyData } = await supabase.from('hired_workers').select('*').eq('worker_id', user?.id).order('created_at', { ascending: false });
       
-      if (profileData) setProfile(profileData);
       if (historyData) setHistory(historyData.filter(h => h.status === 'completed' || h.status === 'verified'));
     } catch (err) {
       console.error(err);

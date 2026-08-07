@@ -23,10 +23,7 @@ interface WorkerReliabilityViewProps {
 }
 
 export default function WorkerReliabilityView({ onNavigate, isEmbedded = false, onLogout }: WorkerReliabilityViewProps) {
-  const { user } = useAuth();
-
-  // Profile data
-  const [profile, setProfile] = useState<any>(null);
+  const { user, profile } = useAuth();
   const [loadingProfile, setLoadingProfile] = useState(true);
 
   // Stats
@@ -46,101 +43,86 @@ export default function WorkerReliabilityView({ onNavigate, isEmbedded = false, 
   const [activeTab, setActiveTab] = useState<'Dashboard' | 'ResumeBuilder'>('Dashboard');
 
   useEffect(() => {
-    if (user) {
-      loadProfileAndStats();
+    async function loadStats() {
+      if (!user) return;
+      setLoadingProfile(true);
+      try {
+        const { data: historyData, error: historyErr } = await supabase
+          .from('hired_workers')
+          .select('*')
+          .eq('worker_id', user.id)
+          .order('created_at', { ascending: false });
+
+        if (!historyErr && historyData) {
+          const ratedHistory = historyData.filter(item => item.rating_given);
+          setActiveHistory(historyData);
+          
+          const completed = historyData.filter(item => item.status === 'completed' || item.status === 'verified').length;
+          setCompletedShifts(completed);
+
+          const noShows = historyData.filter(item => item.rating_given && item.rating <= 2).length;
+          const totalAttempts = completed + noShows;
+          const rate = totalAttempts > 0 ? Math.round((completed / totalAttempts) * 100) : 100;
+          setAttendanceRate(rate);
+
+          // Calculate SWEAT pillars
+          let skillsSum = 0; let workEthicSum = 0; let trustSum = 0; let validRatedCount = 0;
+          
+          ratedHistory.forEach(item => {
+            if (item.sweat_metrics) {
+              skillsSum += item.sweat_metrics.skills || item.rating || 5;
+              workEthicSum += item.sweat_metrics.work_ethic || item.rating || 5;
+              trustSum += item.sweat_metrics.trust || item.rating || 5;
+              validRatedCount++;
+            } else if (item.rating) {
+              skillsSum += item.rating; workEthicSum += item.rating; trustSum += item.rating;
+              validRatedCount++;
+            }
+          });
+
+          const avgSkills = validRatedCount > 0 ? (skillsSum / validRatedCount) : 5.0;
+          const avgWorkEthic = validRatedCount > 0 ? (workEthicSum / validRatedCount) : 5.0;
+          const avgTrust = validRatedCount > 0 ? (trustSum / validRatedCount) : 5.0;
+          const experienceScore = Math.min(5.0, 1.0 + (completed * 0.25)); 
+          const attendanceScore = rate / 20.0;
+          
+          setSweatSkills(avgSkills);
+          setSweatWorkEthic(avgWorkEthic);
+          setSweatExperience(experienceScore);
+          setSweatAttendance(attendanceScore);
+          setSweatTrust(avgTrust);
+
+          const overall = (avgSkills + avgWorkEthic + experienceScore + attendanceScore + avgTrust) / 5;
+          setReliabilityScore(overall.toFixed(2));
+
+          // Badges
+          let fbCount = 0; let eventCount = 0; let logisticsCount = 0;
+          
+          historyData.forEach(item => {
+            const t = (item.gig_title || '').toLowerCase();
+            const c = (item.gig_category || '').toLowerCase();
+            if (t.includes('waiter') || t.includes('cafe') || t.includes('barista') || t.includes('food') || c.includes('f&b')) fbCount++;
+            else if (t.includes('event') || t.includes('usher') || t.includes('booth') || c.includes('event')) eventCount++;
+            else if (t.includes('delivery') || t.includes('warehouse') || t.includes('packer') || c.includes('logistics')) logisticsCount++;
+          });
+
+          const derivedBadges = [];
+          if (fbCount > 0) derivedBadges.push({ id: 'fb', icon: 'coffee', name: 'F&B Crew', level: Math.min(3, Math.ceil(fbCount / 2)) });
+          if (eventCount > 0) derivedBadges.push({ id: 'event', icon: 'confirmation_number', name: 'Event Assistant', level: Math.min(3, Math.ceil(eventCount / 2)) });
+          if (logisticsCount > 0) derivedBadges.push({ id: 'logistics', icon: 'local_shipping', name: 'Logistics Pro', level: Math.min(3, Math.ceil(logisticsCount / 2)) });
+          if (rate >= 95 && completed > 0) derivedBadges.push({ id: 'reliable', icon: 'verified_user', name: 'Reliable', level: 3 });
+          if (avgTrust >= 4.5 && completed > 0) derivedBadges.push({ id: 'team', icon: 'group', name: 'Team Player', level: 3 });
+
+          setBadges(derivedBadges);
+        }
+      } catch (err) {
+        console.error('Error loading reliability profile:', err);
+      } finally {
+        setLoadingProfile(false);
+      }
     }
+    loadStats();
   }, [user]);
-
-  const loadProfileAndStats = async () => {
-    if (!user) return;
-    setLoadingProfile(true);
-    try {
-      // 1. Fetch user profile
-      const { data: profileData, error: profileErr } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', user.id)
-        .single();
-      
-      if (!profileErr && profileData) {
-        setProfile(profileData);
-      }
-
-      // 2. Fetch completed gigs / hired workers history
-      const { data: historyData, error: historyErr } = await supabase
-        .from('hired_workers')
-        .select('*')
-        .eq('worker_id', user.id)
-        .order('created_at', { ascending: false });
-
-      if (!historyErr && historyData) {
-        const ratedHistory = historyData.filter(item => item.rating_given);
-        setActiveHistory(historyData);
-        
-        const completed = historyData.filter(item => item.status === 'completed' || item.status === 'verified').length;
-        setCompletedShifts(completed);
-
-        const noShows = historyData.filter(item => item.rating_given && item.rating <= 2).length;
-        const totalAttempts = completed + noShows;
-        const rate = totalAttempts > 0 ? Math.round((completed / totalAttempts) * 100) : 100;
-        setAttendanceRate(rate);
-
-        // Calculate SWEAT pillars
-        let skillsSum = 0; let workEthicSum = 0; let trustSum = 0; let validRatedCount = 0;
-        
-        ratedHistory.forEach(item => {
-          if (item.sweat_metrics) {
-            skillsSum += item.sweat_metrics.skills || item.rating || 5;
-            workEthicSum += item.sweat_metrics.work_ethic || item.rating || 5;
-            trustSum += item.sweat_metrics.trust || item.rating || 5;
-            validRatedCount++;
-          } else if (item.rating) {
-            skillsSum += item.rating; workEthicSum += item.rating; trustSum += item.rating;
-            validRatedCount++;
-          }
-        });
-
-        const avgSkills = validRatedCount > 0 ? (skillsSum / validRatedCount) : 5.0;
-        const avgWorkEthic = validRatedCount > 0 ? (workEthicSum / validRatedCount) : 5.0;
-        const avgTrust = validRatedCount > 0 ? (trustSum / validRatedCount) : 5.0;
-        const experienceScore = Math.min(5.0, 1.0 + (completed * 0.25)); 
-        const attendanceScore = rate / 20.0;
-        
-        setSweatSkills(avgSkills);
-        setSweatWorkEthic(avgWorkEthic);
-        setSweatExperience(experienceScore);
-        setSweatAttendance(attendanceScore);
-        setSweatTrust(avgTrust);
-
-        const overall = (avgSkills + avgWorkEthic + experienceScore + attendanceScore + avgTrust) / 5;
-        setReliabilityScore(overall.toFixed(2));
-
-        // Badges
-        let fbCount = 0; let eventCount = 0; let logisticsCount = 0;
-        
-        historyData.forEach(item => {
-          const t = (item.gig_title || '').toLowerCase();
-          const c = (item.gig_category || '').toLowerCase();
-          if (t.includes('waiter') || t.includes('cafe') || t.includes('barista') || t.includes('food') || c.includes('f&b')) fbCount++;
-          else if (t.includes('event') || t.includes('usher') || t.includes('booth') || c.includes('event')) eventCount++;
-          else if (t.includes('delivery') || t.includes('warehouse') || t.includes('packer') || c.includes('logistics')) logisticsCount++;
-        });
-
-        const derivedBadges = [];
-        if (fbCount > 0) derivedBadges.push({ id: 'fb', icon: 'coffee', name: 'F&B Crew', level: Math.min(3, Math.ceil(fbCount / 2)) });
-        if (eventCount > 0) derivedBadges.push({ id: 'event', icon: 'confirmation_number', name: 'Event Assistant', level: Math.min(3, Math.ceil(eventCount / 2)) });
-        if (logisticsCount > 0) derivedBadges.push({ id: 'logistics', icon: 'local_shipping', name: 'Logistics Pro', level: Math.min(3, Math.ceil(logisticsCount / 2)) });
-        if (rate >= 95 && completed > 0) derivedBadges.push({ id: 'reliable', icon: 'verified_user', name: 'Reliable', level: 3 });
-        if (avgTrust >= 4.5 && completed > 0) derivedBadges.push({ id: 'team', icon: 'group', name: 'Team Player', level: 3 });
-
-        setBadges(derivedBadges);
-      }
-    } catch (err) {
-      console.error('Error loading reliability profile:', err);
-    } finally {
-      setLoadingProfile(false);
-    }
-  };
 
   if (loadingProfile) {
     return (

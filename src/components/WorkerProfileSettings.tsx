@@ -23,7 +23,8 @@ const PRESET_AVATARS = [
 const DEFAULT_SKILLS = ['Barista', 'Event Crew', 'Packing', 'Cashier', 'Tutoring', 'Cleaning', 'Customer Service', 'Data Entry'];
 
 export default function WorkerProfileSettings() {
-  const { user } = useAuth();
+  const { user, refreshProfile } = useAuth();
+  const [profile, setProfile] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [verifyingCard, setVerifyingCard] = useState(false);
@@ -205,6 +206,8 @@ export default function WorkerProfileSettings() {
         .eq('id', user?.id);
       
       if (error) throw error;
+      
+      await refreshProfile();
       
       showToast('✅ Profile & Schedule updated successfully!');
     } catch (err) {

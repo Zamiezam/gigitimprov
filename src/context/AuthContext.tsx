@@ -6,11 +6,13 @@ import { supabase } from '../supabaseClient';
 interface AuthContextType {
   user: User | null;
   userRole: 'worker' | 'employer' | null;
+  profile: any | null;
   loading: boolean;
   signUpWithEmail: (email: string, password: string, fullName: string, role: 'worker' | 'employer', extraData?: Record<string, any>) => Promise<void>;
   signInWithEmail: (email: string, password: string) => Promise<void>;
   logOut: () => Promise<void>;
   switchRole: (role: 'worker' | 'employer') => Promise<void>;
+  refreshProfile: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -18,7 +20,21 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [userRole, setUserRole] = useState<'worker' | 'employer' | null>(null);
+  const [profile, setProfile] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);
+
+  // Fetch user profile
+  const fetchProfile = async (userId: string) => {
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', userId)
+      .single();
+    
+    if (!error && data) {
+      setProfile(data);
+    }
+  };
 
   // Fetch user role from profiles table
   const fetchUserRole = async (userId: string) => {
@@ -41,9 +57,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       
       if (currentUser) {
         await fetchUserRole(currentUser.id);
+        await fetchProfile(currentUser.id);
       } else {
         localStorage.removeItem('userRole');
         setUserRole(null);
+        setProfile(null);
       }
       
       setLoading(false);
@@ -55,9 +73,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       
       if (currentUser) {
         await fetchUserRole(currentUser.id);
+        await fetchProfile(currentUser.id);
       } else {
         localStorage.removeItem('userRole');
         setUserRole(null);
+        setProfile(null);
       }
       
       setLoading(false);
@@ -150,8 +170,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     localStorage.setItem('userRole', role);
   };
 
+  const refreshProfile = async () => {
+    if (user) {
+      await fetchProfile(user.id);
+    }
+  };
+
   return (
-    <AuthContext.Provider value={{ user, userRole, loading, signUpWithEmail, signInWithEmail, logOut, switchRole }}>
+    <AuthContext.Provider value={{ user, userRole, profile, loading, signUpWithEmail, signInWithEmail, logOut, switchRole, refreshProfile }}>
       {children}
     </AuthContext.Provider>
   );

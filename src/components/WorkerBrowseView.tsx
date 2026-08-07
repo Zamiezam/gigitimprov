@@ -62,7 +62,7 @@ export default function WorkerBrowseView({
   initialTab,
   onLogout,
 }: WorkerBrowseViewProps) {
-  const { user, logOut } = useAuth();
+  const { user, profile, logOut } = useAuth();
 
   // ── UI state ────────────────────────────────────────────────
   const [selectedCategory, setSelectedCategory] = useState<string>('All Types');
@@ -83,7 +83,6 @@ export default function WorkerBrowseView({
   const [error, setError] = useState<string | null>(null);
   const [selectedGig, setSelectedGig] = useState<Gig | null>(null);
   const [appliedGigs, setAppliedGigs] = useState<Set<string>>(new Set());
-  const [profile, setProfile] = useState<any>(null);
   const [activeShift, setActiveShift] = useState<any>(null);
 
   // Earnings calculations
@@ -96,13 +95,10 @@ export default function WorkerBrowseView({
 
   const [dynamicReliability, setDynamicReliability] = useState<string | null>(null);
 
-  // ── Fetch user profile and compute reliability ──────
+  // ── Fetch user reliability stats ──────
   useEffect(() => {
     if (!user) return;
-    async function loadProfileAndStats() {
-      const { data: profileData } = await supabase.from('profiles').select('*').eq('id', user.id).single();
-      if (profileData) setProfile(profileData);
-
+    async function loadStats() {
       const { data: historyData } = await supabase.from('hired_workers').select('*').eq('worker_id', user.id);
       if (historyData) {
         const ratedHistory = historyData.filter(item => item.rating_given);
@@ -130,7 +126,7 @@ export default function WorkerBrowseView({
         setDynamicReliability(overall.toFixed(1));
       }
     }
-    loadProfileAndStats();
+    loadStats();
   }, [user]);
 
   // ── Fetch active clocked in shifts ──────
