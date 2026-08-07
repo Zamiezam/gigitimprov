@@ -22,6 +22,8 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { GoogleGenAI } from '@google/genai';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 const ai = new GoogleGenAI({ apiKey: import.meta.env.VITE_GEMINI_API_KEY });
 
@@ -752,10 +754,70 @@ export default function EmployerDashboardView({ onNavigate, gigs, onAddGig, onLo
                   <button 
                     onClick={() => {
                       setIsExportingEsg(true);
-                      setTimeout(() => {
+                      
+                      try {
+                        const doc = new jsPDF();
+                        
+                        // Header
+                        doc.setFillColor(33, 150, 243); // Primary color
+                        doc.rect(0, 0, 210, 40, 'F');
+                        
+                        doc.setTextColor(255, 255, 255);
+                        doc.setFontSize(22);
+                        doc.setFont("helvetica", "bold");
+                        doc.text("GigIT Corporate ESG Impact Report", 15, 25);
+                        
+                        // Subtitle & Date
+                        doc.setTextColor(0, 0, 0);
+                        doc.setFontSize(11);
+                        doc.setFont("helvetica", "normal");
+                        doc.text(`Generated on: ${new Date().toLocaleDateString()}`, 15, 50);
+                        doc.text(`Company: ${employerProfile?.company_name || 'Employer'}`, 15, 58);
+                        
+                        // Summary block
+                        doc.setFont("helvetica", "bold");
+                        doc.setFontSize(14);
+                        doc.text("Social Impact Summary", 15, 75);
+                        
+                        doc.setFont("helvetica", "normal");
+                        doc.setFontSize(11);
+                        const summaryText = `Through the Job on Campus ecosystem, your organization has actively contributed to youth empowerment and economic growth. By hiring local university students, you are providing crucial real-world training hours, mentorship, and direct financial support to the B40 student community.`;
+                        const splitSummary = doc.splitTextToSize(summaryText, 180);
+                        doc.text(splitSummary, 15, 83);
+                        
+                        // Metrics Table
+                        autoTable(doc, {
+                          startY: 110,
+                          head: [['Metric Category', 'Impact Metric', 'Value']],
+                          body: [
+                            ['Economic Empowerment', 'B40 Student Wages Distributed', `RM ${esgStats.b40WagesPaid.toLocaleString()}`],
+                            ['Economic Empowerment', 'Total Wages Paid', `RM ${esgStats.totalWagesPaid.toLocaleString()}`],
+                            ['Youth Development', 'Total Training Hours Provided', `${esgStats.totalHoursWorked} Hours`],
+                            ['Youth Development', 'Unique Students Hired', `${esgStats.studentsHired} Students`],
+                            ['Mentorship & Quality', 'Top Mentored Skill', `${esgStats.topSkillMentored}`],
+                            ['Mentorship & Quality', 'Average Worker Rating', `${esgStats.avgRating > 0 ? esgStats.avgRating + ' / 5.0' : 'N/A'}`],
+                            ['Ecosystem Growth', 'Opportunities Created (Gigs)', `${esgStats.totalGigsPosted}`],
+                          ],
+                          headStyles: { fillColor: [33, 150, 243] },
+                          theme: 'grid',
+                          margin: { top: 10, left: 15, right: 15 }
+                        });
+                        
+                        // Footer
+                        doc.setFontSize(9);
+                        doc.setTextColor(150, 150, 150);
+                        doc.text("This report verifies your ESG contributions through GigIT.", 15, doc.internal.pageSize.getHeight() - 15);
+                        
+                        // Save
+                        doc.save(`ESG_Impact_Report_${new Date().getTime()}.pdf`);
+                        
+                        setShowSuccessToast("ESG Impact Report downloaded successfully!");
+                      } catch (err) {
+                        console.error('Failed to generate PDF:', err);
+                        setShowSuccessToast("Failed to generate PDF. Check console.");
+                      } finally {
                         setIsExportingEsg(false);
-                        setShowSuccessToast("ESG Impact Report generated and sent to your email.");
-                      }, 2000);
+                      }
                     }}
                     disabled={isExportingEsg}
                     className="bg-primary text-white px-6 py-3 rounded-xl font-bold hover:bg-primary/90 transition-all shadow-md active:scale-95 flex items-center gap-2 disabled:opacity-70"
@@ -763,7 +825,7 @@ export default function EmployerDashboardView({ onNavigate, gigs, onAddGig, onLo
                     {isExportingEsg ? (
                       <><div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div> Generating...</>
                     ) : (
-                      <><FileText size={18} /> Export ESG Report</>
+                      <><FileText size={18} /> Export ESG PDF</>
                     )}
                   </button>
                 </div>
