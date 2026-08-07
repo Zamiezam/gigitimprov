@@ -10,6 +10,7 @@ import HiredWorkers from './HiredWorkers';
 import WorkerProfileModal from './WorkerProfileModal';
 import EmployerSettings from './EmployerSettings';
 import Wallet from './Wallet';
+import HiringPortal from './HiringPortal';
 import AdminSeedButton from './AdminSeedButton';
 import DebugPanel from './DebugPanel';
 import { 
@@ -95,7 +96,7 @@ export default function EmployerDashboardView({ onNavigate, gigs, onAddGig, onLo
   // State
   const [selectedWorkerProfile, setSelectedWorkerProfile] = useState<any>(null);
   const [showWorkerProfile, setShowWorkerProfile] = useState(false);
-  const [currentSubView, setCurrentSubView] = useState<'dashboard' | 'mygigs' | 'hired' | 'settings' | 'wallet' | 'esg'>('dashboard'); 
+  const [currentSubView, setCurrentSubView] = useState<'dashboard' | 'mygigs' | 'hired' | 'hiring' | 'settings' | 'wallet' | 'esg'>('dashboard'); 
   const [selectedGigForBackup, setSelectedGigForBackup] = useState<Gig | null>(null);
   const [showBackupPool, setShowBackupPool] = useState(false);
   const [applicants, setApplicants] = useState<Applicant[]>([]);
@@ -674,8 +675,19 @@ export default function EmployerDashboardView({ onNavigate, gigs, onAddGig, onLo
                   : 'text-on-surface-variant hover:bg-surface-container-low'
               }`}
             >
-              <Users size={18} />
+              <Check size={18} />
               <span className="text-sm">Escrow & Wages</span>
+            </button>
+            <button 
+              onClick={() => setCurrentSubView('hiring')} 
+              className={`w-full flex items-center gap-3 p-3 rounded-xl transition-all ${
+                currentSubView === 'hiring' 
+                  ? 'bg-primary-container text-on-primary-container font-bold' 
+                  : 'text-on-surface-variant hover:bg-surface-container-low'
+              }`}
+            >
+              <Users size={18} />
+              <span className="text-sm">Hiring Portal</span>
             </button>
             <button 
               onClick={() => setCurrentSubView('settings')} 
@@ -1093,6 +1105,9 @@ export default function EmployerDashboardView({ onNavigate, gigs, onAddGig, onLo
           {currentSubView === 'hired' && (
             <HiredWorkers />
           )}
+          {currentSubView === 'hiring' && (
+            <HiringPortal myGigs={myGigs} />
+          )}
           {currentSubView === 'settings' && <EmployerSettings />}
           {currentSubView === 'wallet' && <Wallet />}
           {import.meta.env.DEV && <AdminSeedButton />}
@@ -1103,10 +1118,10 @@ export default function EmployerDashboardView({ onNavigate, gigs, onAddGig, onLo
       <nav className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white border-t border-outline-variant flex justify-around items-center h-16 shadow-lg">
         {[
           { id: 'dashboard', icon: <Home size={20} />, label: 'Dashboard' },
-          { id: 'mygigs', icon: <Briefcase size={20} />, label: 'Opportunities' },
-          { id: 'hired', icon: <Users size={20} />, label: 'Escrow' },
+          { id: 'mygigs', icon: <Briefcase size={20} />, label: 'Gigs' },
+          { id: 'hiring', icon: <Users size={20} />, label: 'Hire' },
+          { id: 'hired', icon: <Check size={20} />, label: 'Escrow' },
           { id: 'wallet', icon: <CreditCard size={20} />, label: 'Wallet' },
-          { id: 'settings', icon: <Settings size={20} />, label: 'Settings' },
         ].map(tab => (
           <button
             key={tab.id}

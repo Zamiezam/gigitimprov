@@ -55,6 +55,15 @@ export default function WorkerProfileSettings() {
   const [householdIncome, setHouseholdIncome] = useState<number | ''>('');
   const [incomeClassification, setIncomeClassification] = useState('');
 
+  // Schedule state
+  interface ScheduleRow {
+    id?: string;
+    day_of_week: string;
+    start_time: string;
+    end_time: string;
+  }
+  const [schedules, setSchedules] = useState<ScheduleRow[]>([]);
+
   // Local helper states
   const [customAvatarUrl, setCustomAvatarUrl] = useState('');
   const [newSkill, setNewSkill] = useState('');
@@ -135,6 +144,15 @@ export default function WorkerProfileSettings() {
         setHouseholdIncome(data.household_income || '');
         setIncomeClassification(data.income_classification || '');
       }
+      
+      // Fetch schedules
+      const { data: scheduleData } = await supabase
+        .from('worker_schedules')
+        .select('*')
+        .eq('worker_id', user?.id);
+      if (scheduleData) {
+        setSchedules(scheduleData);
+      }
     } catch (err) {
       console.error('Error fetching profile:', err);
     } finally {
@@ -199,7 +217,21 @@ export default function WorkerProfileSettings() {
       
       if (error) throw error;
       
-      showToast('✅ Profile updated successfully!');
+      // Save schedules
+      if (schedules.length >= 0) {
+        await supabase.from('worker_schedules').delete().eq('worker_id', user?.id);
+        if (schedules.length > 0) {
+          const schedPayload = schedules.map(s => ({
+            worker_id: user?.id,
+            day_of_week: s.day_of_week,
+            start_time: s.start_time,
+            end_time: s.end_time
+          }));
+          await supabase.from('worker_schedules').insert(schedPayload);
+        }
+      }
+      
+      showToast('✅ Profile & Schedule updated successfully!');
     } catch (err) {
       console.error('Error saving profile:', err);
       showToast('❌ Failed to update profile');
@@ -375,6 +407,76 @@ export default function WorkerProfileSettings() {
                       className="w-full px-3 py-1.5 rounded-lg border border-outline-variant text-xs focus:outline-primary bg-surface-container-lowest"
                     />
                   </div>
+                </div>
+
+                {/* Section 4: Recurring Weekly Schedule */}
+                <div>
+                  <h3 className="font-semibold text-sm mb-3 text-on-surface pb-1 border-b border-outline-variant/40 flex items-center gap-1.5"><Clock size={16} className="text-primary" /> Availability & Schedule</h3>
+                  <p className="text-[10px] text-on-surface-variant mb-4 leading-relaxed">Add your recurring free time so employers know when you are available to work. This makes you more likely to get direct job offers.</p>
+                  
+                  <div className="space-y-3 mb-3">
+                    {schedules.map((sched, index) => (
+                      <div key={index} className="flex flex-wrap items-center gap-2 bg-surface-container-lowest p-2 rounded-lg border border-outline-variant/50">
+                        <select 
+                          value={sched.day_of_week}
+                          onChange={(e) => {
+                            const newScheds = [...schedules];
+                            newScheds[index].day_of_week = e.target.value;
+                            setSchedules(newScheds);
+                          }}
+                          className="px-2 py-1.5 rounded-lg border border-outline-variant text-xs focus:outline-primary bg-white flex-1 min-w-[100px]"
+                        >
+                          <option value="Monday">Monday</option>
+                          <option value="Tuesday">Tuesday</option>
+                          <option value="Wednesday">Wednesday</option>
+                          <option value="Thursday">Thursday</option>
+                          <option value="Friday">Friday</option>
+                          <option value="Saturday">Saturday</option>
+                          <option value="Sunday">Sunday</option>
+                        </select>
+                        <input 
+                          type="time" 
+                          value={sched.start_time}
+                          onChange={(e) => {
+                            const newScheds = [...schedules];
+                            newScheds[index].start_time = e.target.value;
+                            setSchedules(newScheds);
+                          }}
+                          className="px-2 py-1.5 rounded-lg border border-outline-variant text-xs focus:outline-primary bg-white"
+                        />
+                        <span className="text-xs font-bold text-on-surface-variant">to</span>
+                        <input 
+                          type="time" 
+                          value={sched.end_time}
+                          onChange={(e) => {
+                            const newScheds = [...schedules];
+                            newScheds[index].end_time = e.target.value;
+                            setSchedules(newScheds);
+                          }}
+                          className="px-2 py-1.5 rounded-lg border border-outline-variant text-xs focus:outline-primary bg-white"
+                        />
+                        <button 
+                          onClick={() => {
+                            const newScheds = [...schedules];
+                            newScheds.splice(index, 1);
+                            setSchedules(newScheds);
+                          }}
+                          className="p-1.5 text-error hover:bg-error/10 rounded-full transition-colors"
+                        >
+                          <X size={14} />
+                        </button>
+                      </div>
+                    ))}
+                    {schedules.length === 0 && (
+                      <p className="text-xs text-on-surface-variant italic">No schedule blocks added yet.</p>
+                    )}
+                  </div>
+                  <button 
+                    onClick={() => setSchedules([...schedules, { day_of_week: 'Monday', start_time: '08:00', end_time: '17:00' }])}
+                    className="flex items-center gap-1 text-[10px] bg-primary/10 text-primary px-3 py-1.5 rounded-full font-bold hover:bg-primary/20 transition-colors"
+                  >
+                    <Plus size={12} /> Add Time Block
+                  </button>
                 </div>
               </div>
 
