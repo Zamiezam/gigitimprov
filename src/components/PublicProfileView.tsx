@@ -14,12 +14,15 @@ import { Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Responsi
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
 import { Mail, Phone, GraduationCap, Briefcase, Loader2 } from 'lucide-react';
+import { AnimatePresence } from 'motion/react';
 
 interface PublicProfileViewProps {
   workerId: string;
+  attendanceMode?: boolean;
+  onCloseAttendance?: () => void;
 }
 
-export default function PublicProfileView({ workerId }: PublicProfileViewProps) {
+export default function PublicProfileView({ workerId, attendanceMode = false, onCloseAttendance }: PublicProfileViewProps) {
   // Profile data
   const [profile, setProfile] = useState<any>(null);
   const [loadingProfile, setLoadingProfile] = useState(true);
@@ -211,6 +214,41 @@ export default function PublicProfileView({ workerId }: PublicProfileViewProps) 
               <h1 className="font-display font-bold text-2xl mt-4 tracking-tight">{workerName.toUpperCase()}</h1>
               <p className="text-white/80 text-sm font-medium mt-1 tracking-wide">{workerUniversity}</p>
             </div>
+            
+            {/* Attendance Mode Overlay Animation */}
+            <AnimatePresence>
+              {attendanceMode && (
+                <motion.div 
+                  initial={{ opacity: 0, scale: 0.8, y: 50 }}
+                  animate={{ opacity: 1, scale: 1, y: 0 }}
+                  exit={{ opacity: 0, scale: 0.8, y: -50 }}
+                  transition={{ type: 'spring', bounce: 0.5, duration: 0.8 }}
+                  className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-[#0f4a42]/90 backdrop-blur-sm rounded-b-[3rem] p-6 text-center"
+                >
+                  <motion.div
+                    initial={{ scale: 0 }}
+                    animate={{ scale: 1 }}
+                    transition={{ delay: 0.3, type: 'spring' }}
+                    className="w-20 h-20 bg-green-500 rounded-full flex items-center justify-center mb-6 shadow-[0_0_40px_rgba(34,197,94,0.6)]"
+                  >
+                    <ShieldCheck size={40} className="text-white" />
+                  </motion.div>
+                  <h2 className="text-4xl font-display font-black text-white mb-2 tracking-tight">
+                    Hello, {workerName.split(' ')[0]}!
+                  </h2>
+                  <p className="text-green-100 font-bold text-lg mb-8">Attendance Recorded</p>
+                  
+                  {onCloseAttendance && (
+                    <button 
+                      onClick={onCloseAttendance}
+                      className="px-6 py-2.5 bg-white text-[#0f4a42] rounded-full font-bold text-sm shadow-lg hover:bg-green-50 transition-colors"
+                    >
+                      Continue
+                    </button>
+                  )}
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
 
           {/* Score & Stats Card (Overlapping) */}

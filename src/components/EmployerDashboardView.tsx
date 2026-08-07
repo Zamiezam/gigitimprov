@@ -11,6 +11,8 @@ import WorkerProfileModal from './WorkerProfileModal';
 import EmployerSettings from './EmployerSettings';
 import Wallet from './Wallet';
 import HiringPortal from './HiringPortal';
+import NFCScannerWidget from './NFCScannerWidget';
+import PublicProfileView from './PublicProfileView';
 import AdminSeedButton from './AdminSeedButton';
 import DebugPanel from './DebugPanel';
 import { 
@@ -103,6 +105,12 @@ export default function EmployerDashboardView({ onNavigate, gigs, onAddGig, onLo
   const [showBackupPool, setShowBackupPool] = useState(false);
   const [applicants, setApplicants] = useState<Applicant[]>([]);
   const [loading, setLoading] = useState(true);
+
+  // NFC Scanner state
+  const [nfcScannedWorkerId, setNfcScannedWorkerId] = useState<string | null>(null);
+  const [showNfcProfileModal, setShowNfcProfileModal] = useState(false);
+  const [nfcAttendanceMode, setNfcAttendanceMode] = useState(false);
+  const [nfcScanLog, setNfcScanLog] = useState<{ name: string; time: string }[]>([]);
   // ESG stats
   const [esgStats, setEsgStats] = useState({ 
     studentsHired: 0, 
@@ -613,6 +621,82 @@ export default function EmployerDashboardView({ onNavigate, gigs, onAddGig, onLo
   const totalApplicants = applicants.length;
   const pendingApplicants = applicants.filter(a => a.status === 'Pending').length;
 
+  // Handle NFC scan from the IoT device
+  const handleNFCScan = async (uid: string) => {
+    try {
+      // Look up the worker by their NFC UID
+      const { data: workerProfile, error } = await supabase
+        .from('profiles')
+        .select('id, full_name')
+        .eq('nfc_uid', uid)
+        .single();
+
+      if (error || !workerProfile) {
+        setShowSuccessToast(`⚠️ Unknown card scanned (UID: ${uid}). No worker profile found.`);
+        setTimeout(() => setShowSuccessToast(null), 4000);
+        return;
+      }
+
+      // Log attendance in hired_workers — mark clock_in_time
+      const now = new Date().toISOString();
+      const { data: activeHire } = await supabase
+        .from('hired_workers')
+        .select('id, clock_in_time, clock_out_time')
+        .eq('worker_id', workerProfile.id)
+        .eq('employer_id', user?.id)
+        .eq('status', 'active')
+        .is('clock_in_time', null)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .single();
+
+      if (activeHire) {
+        // Clock in
+        await supabase
+          .from('hired_workers')
+          .update({ clock_in_time: now })
+          .eq('id', activeHire.id);
+      } else {
+        // Try to clock out instead
+        const { data: clockedIn } = await supabase
+          .from('hired_workers')
+          .select('id')
+          .eq('worker_id', workerProfile.id)
+          .eq('employer_id', user?.id)
+          .eq('status', 'active')
+          .not('clock_in_time', 'is', null)
+          .is('clock_out_time', null)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .single();
+
+        if (clockedIn) {
+          await supabase
+            .from('hired_workers')
+            .update({ clock_out_time: now })
+            .eq('id', clockedIn.id);
+        }
+      }
+
+      // Show the profile modal with attendance animation
+      setNfcScannedWorkerId(workerProfile.id);
+      setNfcAttendanceMode(true);
+      setShowNfcProfileModal(true);
+
+      // Add to scan log
+      setNfcScanLog(prev => [{ name: workerProfile.full_name || 'Worker', time: new Date().toLocaleTimeString() }, ...prev.slice(0, 9)]);
+
+      // Auto-dismiss the attendance overlay after 5 seconds
+      setTimeout(() => {
+        setNfcAttendanceMode(false);
+      }, 5000);
+    } catch (err) {
+      console.error('NFC scan handler error:', err);
+      setShowSuccessToast('❌ Error processing card scan.');
+      setTimeout(() => setShowSuccessToast(null), 3000);
+    }
+  };
+
   return (
     <div className="bg-background min-h-screen text-on-surface font-sans">
       {/* Header */}
@@ -978,6 +1062,23 @@ export default function EmployerDashboardView({ onNavigate, gigs, onAddGig, onLo
               {/* Main Content (Left, 2 columns) */}
               <div className="lg:col-span-2 space-y-6">
                 
+                {/* NFC Scanner Widget */}
+                <NFCScannerWidget onScan={handleNFCScan} />
+
+                {/* NFC Scan Log (last scans) */}
+                {nfcScanLog.length > 0 && (
+                  <div className="bg-green-50 border border-green-200 rounded-2xl p-4">
+                    <h4 className="text-[10px] font-black text-green-800 uppercase tracking-widest mb-2">Recent Scans</h4>
+                    <div className="flex flex-wrap gap-2">
+                      {nfcScanLog.map((log, i) => (
+                        <span key={i} className="text-xs font-bold bg-white text-green-700 px-3 py-1.5 rounded-lg border border-green-200 shadow-xs">
+                          {log.name} — {log.time}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
                 {/* Contextual Header */}
                 <div className="bg-white p-6 rounded-2xl border border-outline-variant shadow-sm flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                   <div>
@@ -1277,6 +1378,33 @@ export default function EmployerDashboardView({ onNavigate, gigs, onAddGig, onLo
         )}
       </AnimatePresence>
       {import.meta.env.DEV && <DebugPanel />}
+
+      {/* NFC Attendance Profile Modal */}
+      <AnimatePresence>
+        {showNfcProfileModal && nfcScannedWorkerId && (
+          <div className="fixed inset-0 z-[300] bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
+            <motion.div
+              initial={{ scale: 0.8, opacity: 0, y: 40 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.8, opacity: 0, y: 40 }}
+              transition={{ type: 'spring', bounce: 0.35 }}
+              className="w-full max-w-[440px] max-h-[90vh] overflow-y-auto rounded-[2.5rem] shadow-2xl relative"
+            >
+              <button 
+                onClick={() => { setShowNfcProfileModal(false); setNfcAttendanceMode(false); }}
+                className="absolute top-4 right-4 z-[400] w-10 h-10 bg-white/90 rounded-full flex items-center justify-center shadow-lg hover:bg-white transition-colors"
+              >
+                <X size={20} className="text-on-surface" />
+              </button>
+              <PublicProfileView 
+                workerId={nfcScannedWorkerId} 
+                attendanceMode={nfcAttendanceMode}
+                onCloseAttendance={() => setNfcAttendanceMode(false)}
+              />
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
