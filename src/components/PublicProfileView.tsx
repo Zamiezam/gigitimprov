@@ -11,6 +11,9 @@ import {
 } from 'lucide-react';
 import { motion } from 'motion/react';
 import { Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ResponsiveContainer } from 'recharts';
+import html2canvas from 'html2canvas';
+import jsPDF from 'jspdf';
+import { Mail, Phone, GraduationCap, Briefcase, Loader2 } from 'lucide-react';
 
 interface PublicProfileViewProps {
   workerId: string;
@@ -38,6 +41,8 @@ export default function PublicProfileView({ workerId }: PublicProfileViewProps) 
   const [activeTab, setActiveTab] = useState<'profile' | 'passport' | 'history'>('passport');
   const [badges, setBadges] = useState<any[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [generating, setGenerating] = useState(false);
+  const resumeRef = React.useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (workerId) {
@@ -161,6 +166,29 @@ export default function PublicProfileView({ workerId }: PublicProfileViewProps) 
   const workerAvatar = profile?.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(workerName)}&background=0D8ABC&color=fff`;
   const workerUniversity = profile?.university || 'University Student';
 
+  const generatePDF = async () => {
+    if (!resumeRef.current) return;
+    setGenerating(true);
+    try {
+      // Temporarily show it offscreen to render
+      resumeRef.current.style.display = 'block';
+      const canvas = await html2canvas(resumeRef.current, { scale: 2, useCORS: true });
+      resumeRef.current.style.display = 'none';
+
+      const imgData = canvas.toDataURL('image/jpeg', 1.0);
+      const pdf = new jsPDF('p', 'mm', 'a4');
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+      
+      pdf.addImage(imgData, 'JPEG', 0, 0, pdfWidth, pdfHeight);
+      pdf.save(`${workerName.replace(/\s+/g, '_')}_Resume.pdf`);
+    } catch (err) {
+      console.error('Error generating PDF', err);
+    } finally {
+      setGenerating(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-surface-container-lowest flex justify-center py-10 px-4">
       <div className="w-full max-w-[400px]">
@@ -248,8 +276,13 @@ export default function PublicProfileView({ workerId }: PublicProfileViewProps) 
             >
               Contact Worker
             </button>
-            <button className="flex-1 py-3 rounded-xl bg-primary text-white font-bold text-sm hover:bg-primary/90 transition-colors shadow-md flex items-center justify-center gap-2 cursor-pointer">
-              <Download size={16} /> Download PDF
+            <button 
+              onClick={generatePDF}
+              disabled={generating}
+              className="flex-1 py-3 rounded-xl bg-primary text-white font-bold text-sm hover:bg-primary/90 transition-colors shadow-md flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+            >
+              {generating ? <Loader2 size={16} className="animate-spin" /> : <Download size={16} />} 
+              {generating ? 'Wait...' : 'Download PDF'}
             </button>
           </div>
 
@@ -376,6 +409,100 @@ export default function PublicProfileView({ workerId }: PublicProfileViewProps) 
               </div>
             )}
 
+          </div>
+        </div>
+      </div>
+
+      {/* Hidden Resume Template for PDF Generation */}
+      <div style={{ position: 'absolute', top: '-9999px', left: '-9999px' }}>
+        <div 
+          ref={resumeRef}
+          style={{ width: '210mm', minHeight: '297mm', padding: '40px', boxSizing: 'border-box', backgroundColor: 'white', display: 'none' }}
+          className="text-black font-sans"
+        >
+          {/* Header */}
+          <div className="flex items-center gap-6 border-b-2 border-[#0f4a42]/20 pb-8 mb-8">
+            {profile?.avatar_url && (
+              <img src={profile.avatar_url} alt="Profile" style={{ width: '128px', height: '128px', borderRadius: '50%', objectFit: 'cover' }} crossOrigin="anonymous" />
+            )}
+            <div className="flex-1">
+              <h1 className="text-4xl font-black text-[#0f4a42] tracking-tight mb-2 uppercase">{workerName}</h1>
+              <h2 className="text-xl font-bold text-gray-600 mb-4">{workerUniversity}</h2>
+              
+              <div className="flex flex-wrap gap-x-6 gap-y-2 text-sm font-semibold text-gray-600">
+                {profile?.email && <div className="flex items-center gap-1.5"><Mail size={16} className="text-[#0f4a42]" /> {profile.email}</div>}
+                {profile?.phone_number && <div className="flex items-center gap-1.5"><Phone size={16} className="text-[#0f4a42]" /> {profile.phone_number}</div>}
+                {profile?.location && <div className="flex items-center gap-1.5"><MapPin size={16} className="text-[#0f4a42]" /> {profile.location}</div>}
+              </div>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-3 gap-8">
+            {/* Left Column */}
+            <div className="col-span-1 space-y-8">
+              {profile?.bio && (
+                <div>
+                  <h3 className="text-lg font-black text-[#0f4a42] uppercase tracking-wider mb-3 border-b border-gray-200 pb-1">Profile</h3>
+                  <p className="text-sm leading-relaxed font-medium text-gray-800">{profile.bio}</p>
+                </div>
+              )}
+
+              <div>
+                <h3 className="text-lg font-black text-[#0f4a42] uppercase tracking-wider mb-3 border-b border-gray-200 pb-1">Education</h3>
+                <div className="text-sm font-medium text-gray-800">
+                  <p className="font-bold">{profile?.education_level || 'Higher Education'}</p>
+                  <p className="text-gray-600">{workerUniversity}</p>
+                </div>
+              </div>
+
+              {profile?.skills && profile.skills.length > 0 && (
+                <div>
+                  <h3 className="text-lg font-black text-[#0f4a42] uppercase tracking-wider mb-3 border-b border-gray-200 pb-1">Skills</h3>
+                  <div className="flex flex-col gap-1.5">
+                    {profile.skills.map((skill: string, i: number) => (
+                      <span key={i} className="text-sm font-bold text-gray-800 flex items-center gap-2">
+                        <span className="w-1.5 h-1.5 rounded-full bg-[#0f4a42]" /> {skill}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Right Column */}
+            <div className="col-span-2 space-y-8">
+              <div>
+                <h3 className="text-lg font-black text-[#0f4a42] uppercase tracking-wider mb-4 border-b border-gray-200 pb-1 flex items-center gap-2">
+                  <Briefcase size={20} /> Verified Experience
+                </h3>
+                
+                {activeHistory.filter(h => h.status === 'completed' || h.status === 'verified').length > 0 ? (
+                  <div className="space-y-6">
+                    {activeHistory.filter(h => h.status === 'completed' || h.status === 'verified').map((gig, idx) => (
+                      <div key={idx} className="relative pl-4 border-l-2 border-[#0f4a42]/20">
+                        <div className="absolute w-3 h-3 bg-white border-2 border-[#0f4a42] rounded-full -left-[7.5px] top-1"></div>
+                        <h4 className="font-bold text-base text-gray-900">{gig.gig_title}</h4>
+                        <div className="flex justify-between items-center mb-2">
+                          <span className="text-sm font-bold text-[#0f4a42]">{gig.employer_name}</span>
+                          <span className="text-xs font-bold text-gray-500 bg-gray-100 px-2 py-0.5 rounded">
+                            {new Date(gig.created_at).toLocaleDateString(undefined, { year: 'numeric', month: 'short' })}
+                          </span>
+                        </div>
+                        {gig.review && (
+                          <p className="text-sm text-gray-600 italic leading-relaxed">"{gig.review}"</p>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-sm text-gray-500 font-medium">No verified GigIT experience yet.</p>
+                )}
+              </div>
+            </div>
+          </div>
+          
+          <div className="mt-16 pt-8 border-t border-gray-200 text-center text-xs text-gray-400 font-medium flex justify-center items-center gap-1">
+            Verified by <span className="font-bold text-[#0f4a42] flex items-center gap-0.5"><div className="w-3 h-3 bg-[#0f4a42] text-white rounded-[3px] text-[8px] flex items-center justify-center font-black">G</div> GigIT</span>
           </div>
         </div>
       </div>

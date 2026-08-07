@@ -38,10 +38,12 @@ export default function LoginPage({ onClose, defaultRole = 'worker', onLoginSucc
   const [bankName, setBankName] = useState('');
   const [bankAccountNumber, setBankAccountNumber] = useState('');
   const [expectedRate, setExpectedRate] = useState('');
-  const [commitments, setCommitments] = useState('');
   const [emergencyReady, setEmergencyReady] = useState(false);
   const [emergencyRadius, setEmergencyRadius] = useState('5');
   const [householdIncome, setHouseholdIncome] = useState('');
+  const [availableDays, setAvailableDays] = useState<string[]>([]);
+  const [availableTimes, setAvailableTimes] = useState<string[]>([]);
+  
   
   // B40/M40/T20 auto-classification based on DOSM thresholds
   const getIncomeClassification = (income: string): { label: string; color: string; bg: string } | null => {
@@ -94,7 +96,8 @@ export default function LoginPage({ onClose, defaultRole = 'worker', onLoginSucc
           expected_hourly_rate: expectedRate ? parseFloat(expectedRate) : null,
           household_income: householdIncome ? parseInt(householdIncome) : null,
           income_classification: incomeClass?.label || null,
-          commitments_description: commitments,
+          available_days: availableDays,
+          available_times: availableTimes,
           emergency_ready: emergencyReady,
           emergency_radius_km: emergencyRadius ? parseInt(emergencyRadius) : null
         };
@@ -292,10 +295,42 @@ export default function LoginPage({ onClose, defaultRole = 'worker', onLoginSucc
                       <h3 className="text-sm font-bold text-on-surface">3. Scheduling & Commitments</h3>
                       
                       <div>
-                        <label className="block text-xs font-bold text-on-surface-variant mb-1">Standard Commitments</label>
-                        <div className="relative">
-                          <CalendarClock size={18} className="absolute left-3 top-3 text-on-surface-variant" />
-                          <textarea value={commitments} onChange={(e) => setCommitments(e.target.value)} className="w-full pl-10 pr-4 py-2 rounded-xl border border-outline-variant focus:outline-primary text-sm min-h-[60px]" placeholder="e.g. I have classes Monday-Wednesday mornings..." />
+                        <label className="block text-xs font-bold text-on-surface-variant mb-2">Weekly Availability Schedule</label>
+                        <div className="space-y-3 bg-white p-3 rounded-xl border border-outline-variant/50">
+                          <div>
+                            <span className="text-[10px] uppercase font-bold text-on-surface-variant tracking-wider">Days Available</span>
+                            <div className="flex flex-wrap gap-2 mt-1">
+                              {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map(day => (
+                                <button
+                                  key={day}
+                                  type="button"
+                                  onClick={() => setAvailableDays(prev => prev.includes(day) ? prev.filter(d => d !== day) : [...prev, day])}
+                                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-colors ${
+                                    availableDays.includes(day) ? 'bg-primary text-white' : 'bg-surface-container hover:bg-surface-container-high text-on-surface'
+                                  }`}
+                                >
+                                  {day}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                          <div>
+                            <span className="text-[10px] uppercase font-bold text-on-surface-variant tracking-wider">Preferred Time Slots</span>
+                            <div className="flex flex-wrap gap-2 mt-1">
+                              {['Morning', 'Afternoon', 'Evening'].map(time => (
+                                <button
+                                  key={time}
+                                  type="button"
+                                  onClick={() => setAvailableTimes(prev => prev.includes(time) ? prev.filter(t => t !== time) : [...prev, time])}
+                                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-colors ${
+                                    availableTimes.includes(time) ? 'bg-[#0f4a42] text-white shadow-sm' : 'bg-surface-container hover:bg-surface-container-high text-on-surface'
+                                  }`}
+                                >
+                                  {time}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
                         </div>
                       </div>
 

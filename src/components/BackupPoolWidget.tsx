@@ -15,6 +15,8 @@ interface BackupWorker {
   completed_gigs: number;
   is_available: boolean;
   distance: string;
+  available_days?: string[];
+  available_times?: string[];
 }
 
 interface BackupPoolWidgetProps {
@@ -52,11 +54,12 @@ export default function BackupPoolWidget({ gigId, gigTitle, employerId, onWorker
   const fetchBackupWorkers = async () => {
     setLoading(true);
     try {
-      // Fetch real users with role 'worker' from profiles table
+      // Fetch real users with role 'worker' who opted into emergency backup
       const { data, error } = await supabase
         .from('profiles')
         .select('*')
-        .ilike('role', 'worker');
+        .ilike('role', 'worker')
+        .eq('emergency_ready', true);
       
       if (!error && data) {
         // Map profile data to BackupWorker format
@@ -67,7 +70,9 @@ export default function BackupPoolWidget({ gigId, gigTitle, employerId, onWorker
           rating: profile.rating || 0,
           completed_gigs: profile.completed_gigs || 0,
           is_available: true,
-          distance: profile.location ? `${profile.location}` : 'Location hidden'
+          distance: profile.location ? `${profile.location}` : 'Location hidden',
+          available_days: profile.available_days || [],
+          available_times: profile.available_times || []
         }));
         
         setBackupWorkers(mappedWorkers);
@@ -253,6 +258,11 @@ export default function BackupPoolWidget({ gigId, gigTitle, employerId, onWorker
                       <span className="text-[10px]">{worker.rating}</span>
                       <span className="text-[9px]">• {worker.completed_gigs} gigs • {worker.distance}</span>
                     </div>
+                    {(worker.available_days && worker.available_days.length > 0) && (
+                      <div className="text-[9px] text-green-700 font-bold mt-1 bg-green-50 px-1.5 py-0.5 rounded border border-green-200 inline-block">
+                        Free: {worker.available_days.join(', ')} ({worker.available_times?.join(', ') || 'Anytime'})
+                      </div>
+                    )}
                   </div>
                 </div>
                 <button

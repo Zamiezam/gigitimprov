@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import ResumeBuilderView from './ResumeBuilderView';
 import { AppView, WorkHistoryItem } from '../types';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../services/api';
@@ -42,6 +43,7 @@ export default function WorkerReliabilityView({ onNavigate, isEmbedded = false, 
   const [sweatTrust, setSweatTrust] = useState(5.0);
 
   const [badges, setBadges] = useState<any[]>([]);
+  const [activeTab, setActiveTab] = useState<'Dashboard' | 'ResumeBuilder'>('Dashboard');
 
   useEffect(() => {
     if (user) {
@@ -195,15 +197,19 @@ export default function WorkerReliabilityView({ onNavigate, isEmbedded = false, 
           <nav className="flex-1 space-y-1 mb-6">
             {[
               { id: 'Dashboard',      icon: 'dashboard',      label: 'Dashboard'      },
-              { id: 'MyReliability',  icon: 'verified_user',  label: 'My Profile ID' },
+              { id: 'ResumeBuilder',  icon: 'description',    label: 'Resume Builder' },
               { id: 'ActiveGigs',     icon: 'work',           label: 'Active Gigs'    },
               { id: 'Earnings',       icon: 'payments',       label: 'Earnings'       },
             ].map(({ id, icon, label }) => (
               <button
                 key={id}
-                onClick={() => { if (id === 'Dashboard') onNavigate(AppView.WorkerBrowse); }}
+                onClick={() => { 
+                  if (id === 'Dashboard') setActiveTab('Dashboard'); 
+                  else if (id === 'ResumeBuilder') setActiveTab('ResumeBuilder');
+                  // else if activeGigs etc...
+                }}
                 className={`w-full flex items-center gap-3 px-6 py-3.5 mx-2 rounded-xl text-sm font-bold transition-all ${
-                  id === 'MyReliability'
+                  (activeTab === id || (id === 'Dashboard' && activeTab === 'Dashboard'))
                     ? 'bg-primary text-white shadow-md'
                     : 'text-on-surface-variant hover:bg-surface-container-low'
                 }`}
@@ -229,7 +235,10 @@ export default function WorkerReliabilityView({ onNavigate, isEmbedded = false, 
 
       {/* Main Content Area (Desktop Layout) */}
       <main className={`flex-1 ${isEmbedded ? '' : 'md:ml-64 pt-24 px-6 md:px-10 pb-20'}`}>
-        <div className="max-w-6xl mx-auto space-y-8">
+        {activeTab === 'ResumeBuilder' ? (
+          <ResumeBuilderView onBack={() => setActiveTab('Dashboard')} />
+        ) : (
+          <div className="max-w-6xl mx-auto space-y-8">
           
           {/* Top Banner / Identity */}
           <div className="bg-white rounded-3xl p-8 border border-outline-variant shadow-sm flex flex-col md:flex-row items-center md:items-start justify-between gap-6 relative overflow-hidden">
@@ -388,9 +397,9 @@ export default function WorkerReliabilityView({ onNavigate, isEmbedded = false, 
                 </div>
               </div>
             </div>
-
           </div>
         </div>
+        )}
       </main>
     </div>
   );

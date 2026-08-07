@@ -133,6 +133,8 @@ export interface WorkerProfile extends Profile {
   google_calendar_id?: string;
   emergency_ready?: boolean;
   emergency_radius_km?: number;
+  available_days?: string[];
+  available_times?: string[];
 }
 
 // Additional Worker Profile Fields for Income Classification
