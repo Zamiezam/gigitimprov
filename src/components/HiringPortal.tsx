@@ -39,7 +39,7 @@ export default function HiringPortal({ myGigs }: HiringPortalProps) {
       const { data: profilesData } = await supabase
         .from('profiles')
         .select('*')
-        .eq('role', 'Worker');
+        .ilike('role', 'worker');
 
       if (!profilesData) return;
 
