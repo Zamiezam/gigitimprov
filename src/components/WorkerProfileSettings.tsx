@@ -83,7 +83,7 @@ export default function WorkerProfileSettings() {
       
       if (!error && data) {
         setFullName(data.full_name || '');
-        setPhone(data.phone || '');
+        setPhone(data.phone_number || '');
         setUniversity(data.university || '');
         setMatricId(data.matric_id || '');
         setAvatarUrl(data.avatar_url || PRESET_AVATARS[0]);
@@ -153,7 +153,7 @@ export default function WorkerProfileSettings() {
       // Build update payload
       const payload: any = {
         full_name: fullName,
-        phone: phone,
+        phone_number: phone,
         avatar_url: avatarUrl,
         university: university,
         matric_id: matricId,
