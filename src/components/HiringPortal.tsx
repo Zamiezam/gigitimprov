@@ -95,53 +95,54 @@ export default function HiringPortal({ myGigs }: HiringPortalProps) {
   const calculateFitScore = (worker: Worker, gig: Gig | undefined) => {
     if (!gig) return { score: 0, highlights: [] };
     
-    let score = 50; // Base score
     const highlights: string[] = [];
     const gigText = `${gig.title} ${gig.description} ${gig.tags} ${gig.category}`.toLowerCase();
     const workerText = `${worker.bio} ${worker.skills.join(' ')}`.toLowerCase();
 
+    // Factor 1: SWEATT Score (Reliability)
+    const sweatScoreRaw = Math.round(parseFloat(worker.reliability_score || '4.8') * 20);
+    let score = Math.max(30, Math.round(sweatScoreRaw * 0.5)); // Base score from SWEATT (e.g. 96 SWEATT -> 48 base score)
+    
+    if (sweatScoreRaw >= 90) {
+      highlights.push(`Top SWEATT Score`);
+    }
+
     // Keyword matching
-    const keywords = ['barista', 'event', 'cleaning', 'logistics', 'f&b', 'packing', 'cashier', 'customer service', 'waiter'];
+    const keywords = ['barista', 'event', 'cleaning', 'logistics', 'f&b', 'packing', 'cashier', 'customer service', 'waiter', 'retail', 'admin'];
     let matchedKeywords = 0;
     
     keywords.forEach(kw => {
       if (gigText.includes(kw) && workerText.includes(kw)) {
         score += 15;
         matchedKeywords++;
-        if (!highlights.includes(kw)) highlights.push(`Matches on '${kw}'`);
+        if (!highlights.includes(kw)) highlights.push(`Matches '${kw}'`);
       }
     });
 
-    if (matchedKeywords > 0) {
-      score += 10; // Bonus for having matching keywords
-    } else {
-      const tagsRaw = gig.tags || '';
-      const gigTags = Array.isArray(tagsRaw) ? tagsRaw.map(t => typeof t === 'string' ? t.trim().toLowerCase() : '') : tagsRaw.toString().split(',').map(t => t.trim().toLowerCase());
-      gigTags.forEach(tag => {
-        if (tag && workerText.includes(tag)) {
-          score += 10;
-          if (!highlights.includes(tag)) highlights.push(`Matches on '${tag}'`);
-        }
-      });
-    }
+      if (matchedKeywords > 0) {
+        score += 10; // Bonus for having matching keywords
+      } else {
+        const tagsRaw = gig.tags || '';
+        const gigTags = Array.isArray(tagsRaw) ? tagsRaw.map(t => typeof t === 'string' ? t.trim().toLowerCase() : '') : tagsRaw.toString().split(',').map(t => t.trim().toLowerCase());
+        gigTags.forEach(tag => {
+          if (tag && workerText.includes(tag)) {
+            score += 15;
+            if (!highlights.includes(tag)) highlights.push(`Matches '${tag}'`);
+          }
+        });
+      }
 
-    // High reliability bonus
-    if (parseFloat(worker.reliability_score) >= 4.5) {
-      score += 10;
-      highlights.push('Top Reliability Score');
-    }
-
-    // Schedules exist bonus
-    if (worker.schedules.length > 0) {
-      score += 5;
-      highlights.push('Provided Schedule');
-    }
-
-    return {
-      score: Math.min(score, 99),
-      highlights
+      // Schedules exist bonus
+      if (worker.schedules && worker.schedules.length > 0) {
+        score += 5;
+        highlights.push('Provided Schedule');
+      }
+  
+      return {
+        score: Math.min(score, 99),
+        highlights: highlights.slice(0, 3)
+      };
     };
-  };
 
   const filteredWorkers = useMemo(() => {
     let result = workers;
