@@ -115,8 +115,8 @@ export default function HiringPortal({ myGigs }: HiringPortalProps) {
     if (matchedKeywords > 0) {
       score += 10; // Bonus for having matching keywords
     } else {
-      // Just check any word in tags
-      const gigTags = (gig.tags || '').split(',').map(t => t.trim().toLowerCase());
+      const tagsRaw = gig.tags || '';
+      const gigTags = Array.isArray(tagsRaw) ? tagsRaw.map(t => typeof t === 'string' ? t.trim().toLowerCase() : '') : tagsRaw.toString().split(',').map(t => t.trim().toLowerCase());
       gigTags.forEach(tag => {
         if (tag && workerText.includes(tag)) {
           score += 10;
