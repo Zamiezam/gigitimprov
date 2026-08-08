@@ -115,7 +115,7 @@ export default function EmployerMyGigs({ onNavigate, onPostNewGig }: EmployerMyG
       .from('applicants')
       .select('*')
       .eq('gig_id', gig.id)
-      .order('applied_at', { ascending: false });
+      .order('created_at', { ascending: false });
     
     if (!error && data) {
       setGigApplicants(data);
@@ -403,11 +403,11 @@ export default function EmployerMyGigs({ onNavigate, onPostNewGig }: EmployerMyG
                     {gigApplicants.map((applicant) => (
                       <div key={applicant.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-xl">
                         <div>
-                          <p className="font-semibold text-on-surface">{applicant.worker_name}</p>
+                          <p className="font-semibold text-on-surface">{applicant.name || 'Worker'}</p>
                           <div className="flex items-center gap-2 mt-1">
-                            <span className="text-xs text-secondary">⭐ {applicant.worker_rating}</span>
+                            <span className="text-xs text-secondary">⭐ {applicant.rating || '4.0'}</span>
                             <span className="text-xs text-on-surface-variant">
-                              Applied: {new Date(applicant.applied_at).toLocaleDateString()}
+                              Applied: {new Date(applicant.created_at || new Date()).toLocaleDateString()}
                             </span>
                           </div>
                         </div>
