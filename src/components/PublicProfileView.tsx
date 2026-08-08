@@ -169,7 +169,14 @@ export default function PublicProfileView({ workerId, attendanceMode = false, on
   const workerAvatar = profile?.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(workerName)}&background=0D8ABC&color=fff`;
   const workerUniversity = profile?.university || 'University Student';
 
-  const generatePDF = async () => {
+  const handleDownload = async () => {
+    // If we have an actual resume file uploaded to Supabase, just open it!
+    if (profile?.resume_url) {
+      window.open(profile.resume_url, '_blank');
+      return;
+    }
+    
+    // Otherwise, fallback to generating the placeholder PDF
     if (!resumeRef.current) return;
     setGenerating(true);
     try {
@@ -307,12 +314,12 @@ export default function PublicProfileView({ workerId, attendanceMode = false, on
               Contact Worker
             </button>
             <button 
-              onClick={generatePDF}
+              onClick={handleDownload}
               disabled={generating}
               className="flex-1 py-3 rounded-xl bg-primary text-white font-bold text-sm hover:bg-primary/90 transition-colors shadow-md flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
             >
               {generating ? <Loader2 size={16} className="animate-spin" /> : <Download size={16} />} 
-              {generating ? 'Wait...' : 'Download PDF'}
+              {generating ? 'Wait...' : 'Download Resume'}
             </button>
           </div>
 
