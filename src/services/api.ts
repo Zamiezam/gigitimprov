@@ -112,27 +112,39 @@ export const api = {
         return mockGigs;
       }
       
-      return data.map((gig: any) => ({
-        id: gig.id,
-        title: gig.title,
-        employer: gig.employer,
-        locationName: gig.location_name,
-        distance: gig.distance ?? '',
-        rate: gig.rate,
-        period: gig.period,
-        category: gig.category,
-        isInstant: gig.is_instant ?? false,
-        duration: gig.duration,
-        description: gig.description,
-        tags: gig.tags ?? [],
-        imageUrl: gig.image_url,
-        coords: {
-          x: gig.coords?.x ?? 50,
-          y: gig.coords?.y ?? 50,
-          lat: gig.coords?.lat ?? 6.0367,
-          lng: gig.coords?.lng ?? 116.1186,
-        },
-      }));
+      return data.map((gig: any) => {
+        let computedStatus = gig.status;
+        if (gig.start_time) {
+          const startTime = new Date(gig.start_time).getTime();
+          const now = Date.now();
+          computedStatus = startTime > now ? 'upcoming' : 'active';
+        }
+        
+        return {
+          id: gig.id,
+          title: gig.title,
+          employer: gig.employer,
+          employer_id: gig.employer_id,
+          locationName: gig.location_name,
+          distance: gig.distance ?? '',
+          rate: gig.rate,
+          period: gig.period,
+          category: gig.category,
+          isInstant: gig.is_instant ?? false,
+          duration: gig.duration,
+          description: gig.description,
+          tags: gig.tags ?? [],
+          imageUrl: gig.image_url,
+          coords: {
+            x: gig.coords?.x ?? 50,
+            y: gig.coords?.y ?? 50,
+            lat: gig.coords?.lat ?? 6.0367,
+            lng: gig.coords?.lng ?? 116.1186,
+          },
+          start_time: gig.start_time,
+          status: computedStatus,
+        };
+      });
     } catch (err) {
       console.error('Error fetching gigs, using mock data:', err);
       return mockGigs;
@@ -158,6 +170,7 @@ export const api = {
       if (gig.tags) gigData.tags = gig.tags;
       if (gig.coords) gigData.coords = gig.coords;
       if (gig.status) gigData.status = gig.status;
+      if (gig.start_time) gigData.start_time = gig.start_time;
       
       const { data, error } = await supabase
         .from('gigs')
@@ -223,6 +236,7 @@ export const api = {
         tags: gig.tags || [],
         imageUrl: gig.imageUrl,
         coords: gig.coords || { x: 50, y: 50, lat: 6.0367, lng: 116.1186 },
+        start_time: gig.start_time,
       };
     }
   },
@@ -385,6 +399,88 @@ export const api = {
       console.error('Error sending bonus:', err);
     }
   },
+
+  // ── Attendance ────────────────────────────────────────────────────
+  async getAttendance(): Promise<any[]> {
+    try {
+      const { data, error } = await supabase
+        .from('attendance')
+        .select(`
+          *,
+          profiles(full_name, avatar_url)
+        `)
+        .order('scanned_at', { ascending: false })
+        .limit(20);
+      
+      if (error) throw error;
+      return data || [];
+    } catch (err) {
+      console.error('Error fetching attendance:', err);
+      return [];
+    }
+  },
+
+  async recordAttendance(workerId: string): Promise<any> {
+    try {
+      // 1. Find if the worker is hired for an active gig today
+      // For simplicity, we just look for a gig_applications record for this worker
+      // joined with gigs where status = 'active'
+      const { data: apps, error: appError } = await supabase
+        .from('gig_applications')
+        .select(`
+          id, 
+          gig_id, 
+          gigs(start_time, status)
+        `)
+        .eq('worker_id', workerId)
+        .eq('status', 'hired');
+
+      if (appError) throw appError;
+
+      // Find an active gig
+      const activeApp = apps?.find(app => (app.gigs as any)?.status === 'active');
+
+      if (!activeApp) {
+        throw new Error("Worker is not scheduled for any active gigs right now.");
+      }
+
+      const gigId = activeApp.gig_id;
+      const startTimeStr = (activeApp.gigs as any)?.start_time;
+      
+      let minutesLate = 0;
+      let status = 'on_time';
+
+      if (startTimeStr) {
+        const startTime = new Date(startTimeStr).getTime();
+        const now = new Date().getTime();
+        const diffMs = now - startTime;
+        const diffMins = Math.floor(diffMs / 60000);
+        
+        if (diffMins > 0) {
+          minutesLate = diffMins;
+          status = 'late';
+        }
+      }
+
+      // Record attendance
+      const { data, error } = await supabase
+        .from('attendance')
+        .insert([{
+          gig_id: gigId,
+          worker_id: workerId,
+          status,
+          minutes_late: minutesLate
+        }])
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    } catch (err) {
+      console.error('Error recording attendance:', err);
+      throw err;
+    }
+  }
 };
 
 // Re-export Message type for components

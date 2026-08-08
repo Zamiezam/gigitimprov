@@ -110,7 +110,7 @@ export default function EmployerDashboardView({ onNavigate, gigs, onAddGig, onLo
   const [nfcScannedWorkerId, setNfcScannedWorkerId] = useState<string | null>(null);
   const [showNfcProfileModal, setShowNfcProfileModal] = useState(false);
   const [nfcAttendanceMode, setNfcAttendanceMode] = useState(false);
-  const [nfcScanLog, setNfcScanLog] = useState<{ name: string; time: string }[]>([]);
+  const [nfcScanLog, setNfcScanLog] = useState<any[]>([]);
   // ESG stats
   const [esgStats, setEsgStats] = useState({ 
     studentsHired: 0, 
@@ -149,6 +149,8 @@ export default function EmployerDashboardView({ onNavigate, gigs, onAddGig, onLo
     description: 'Help with basic cafe tasks, taking orders, and serving customers during the afternoon rush. Training provided, friendly team!',
     tags: 'F&B Support, Student Friendly, Flexible Hours',
     location: 'KK Town',
+    start_date: new Date().toISOString().split('T')[0],
+    start_time: '10:00',
   });
 
   // Quick fill from template
@@ -178,6 +180,8 @@ export default function EmployerDashboardView({ onNavigate, gigs, onAddGig, onLo
       description: 'Help with basic cafe tasks, taking orders, and serving customers during the afternoon rush. Training provided, friendly team!',
       tags: 'F&B Support, Student Friendly, Flexible Hours',
       location: 'KK Town',
+      start_date: new Date().toISOString().split('T')[0],
+      start_time: '10:00',
     });
   };
 
@@ -200,6 +204,8 @@ export default function EmployerDashboardView({ onNavigate, gigs, onAddGig, onLo
       description: `We're looking for a ${randomTitle.toLowerCase()} to join our team! Flexible hours, great environment, and competitive pay. Students encouraged to apply.`,
       tags: `${randomCategory === 'F&B' ? 'Customer Service' : randomCategory === 'Event' ? 'Event Setup' : randomCategory === 'Logistics' ? 'Packing' : 'Cleaning'}, Student Friendly, Immediate Start`,
       location: locations[Math.floor(Math.random() * locations.length)],
+      start_date: new Date().toISOString().split('T')[0],
+      start_time: '10:00',
     });
     setShowSuccessToast('🎲 Random gig generated! Edit or click Post.');
     setTimeout(() => setShowSuccessToast(null), 2000);
@@ -327,18 +333,54 @@ export default function EmployerDashboardView({ onNavigate, gigs, onAddGig, onLo
     }
   };
 
+  const fetchAttendance = async () => {
+    try {
+      const data = await api.getAttendance();
+      setNfcScanLog(data.map(item => ({
+        id: item.id,
+        name: item.profiles?.full_name || 'Worker',
+        time: new Date(item.scanned_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        status: item.status,
+        minutes_late: item.minutes_late
+      })));
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
   useEffect(() => {
-    // Subscribe to real-time gig changes
-    const channel = supabase
+    if (user) {
+      fetchAttendance();
+    }
+  }, [user]);
+
+  useEffect(() => {
+    // Subscribe to real-time changes
+    const applicantsChannel = supabase
       .channel('public:applicants')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'applicants' }, payload => {
-        // fetchApplicants again
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'applicants' }, () => {
         fetchAllApplicants();
+      })
+      .subscribe();
+      
+    const attendanceChannel = supabase
+      .channel('public:attendance')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'attendance' }, () => {
+        fetchAttendance();
+      })
+      .subscribe();
+
+    const gigsChannel = supabase
+      .channel('public:gigs')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'gigs' }, () => {
+        fetchMyGigs();
       })
       .subscribe();
     
     return () => {
-      channel.unsubscribe();
+      applicantsChannel.unsubscribe();
+      attendanceChannel.unsubscribe();
+      gigsChannel.unsubscribe();
     };
   }, [user]);
 
@@ -531,6 +573,9 @@ export default function EmployerDashboardView({ onNavigate, gigs, onAddGig, onLo
     e.preventDefault();
     setShowSuccessToast('Posting gig...');
     
+    const startDatetime = `${formData.start_date}T${formData.start_time}:00`;
+    const isUpcoming = new Date(startDatetime).getTime() > new Date().getTime();
+    
     const newGig = {
       title: formData.title,
       employer: employerProfile?.company_name || user?.user_metadata?.full_name?.split(' ')[0] || user?.email?.split('@')[0] || 'Employer',
@@ -546,7 +591,8 @@ export default function EmployerDashboardView({ onNavigate, gigs, onAddGig, onLo
       description: formData.description,
       tags: formData.tags.split(',').map(t => t.trim()).filter(Boolean),
       coords: { x: 58, y: 55, lat: 5.9749, lng: 116.0724 },
-      status: 'open',
+      status: isUpcoming ? 'upcoming' : 'active',
+      start_time: startDatetime,
       created_at: new Date().toISOString()
     };
 
@@ -637,45 +683,12 @@ export default function EmployerDashboardView({ onNavigate, gigs, onAddGig, onLo
         return;
       }
 
-      // Log attendance in hired_workers — mark clock_in_time
-      const now = new Date().toISOString();
-      const { data: activeHire } = await supabase
-        .from('hired_workers')
-        .select('id, clock_in_time, clock_out_time')
-        .eq('worker_id', workerProfile.id)
-        .eq('employer_id', user?.id)
-        .eq('status', 'active')
-        .is('clock_in_time', null)
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .single();
-
-      if (activeHire) {
-        // Clock in
-        await supabase
-          .from('hired_workers')
-          .update({ clock_in_time: now })
-          .eq('id', activeHire.id);
-      } else {
-        // Try to clock out instead
-        const { data: clockedIn } = await supabase
-          .from('hired_workers')
-          .select('id')
-          .eq('worker_id', workerProfile.id)
-          .eq('employer_id', user?.id)
-          .eq('status', 'active')
-          .not('clock_in_time', 'is', null)
-          .is('clock_out_time', null)
-          .order('created_at', { ascending: false })
-          .limit(1)
-          .single();
-
-        if (clockedIn) {
-          await supabase
-            .from('hired_workers')
-            .update({ clock_out_time: now })
-            .eq('id', clockedIn.id);
-        }
+      // Record Real-Time Attendance
+      try {
+        await api.recordAttendance(workerProfile.id);
+        setShowSuccessToast(`✅ Attendance recorded for ${workerProfile.full_name}`);
+      } catch (err: any) {
+        setShowSuccessToast(`⚠️ ${err.message || 'Failed to record attendance.'}`);
       }
 
       // Show the profile modal with attendance animation
@@ -1068,11 +1081,16 @@ export default function EmployerDashboardView({ onNavigate, gigs, onAddGig, onLo
                 {/* NFC Scan Log (last scans) */}
                 {nfcScanLog.length > 0 && (
                   <div className="bg-green-50 border border-green-200 rounded-2xl p-4">
-                    <h4 className="text-[10px] font-black text-green-800 uppercase tracking-widest mb-2">Recent Scans</h4>
+                    <h4 className="text-[10px] font-black text-green-800 uppercase tracking-widest mb-2">Recent Scans & Attendance</h4>
                     <div className="flex flex-wrap gap-2">
                       {nfcScanLog.map((log, i) => (
-                        <span key={i} className="text-xs font-bold bg-white text-green-700 px-3 py-1.5 rounded-lg border border-green-200 shadow-xs">
+                        <span key={i} className={`text-xs font-bold px-3 py-1.5 rounded-lg border shadow-xs flex items-center gap-1.5 ${log.status === 'late' ? 'bg-red-50 text-red-700 border-red-200' : 'bg-white text-green-700 border-green-200'}`}>
                           {log.name} — {log.time}
+                          {log.status === 'late' ? (
+                            <span className="bg-red-100 text-red-800 px-1.5 py-0.5 rounded text-[9px] uppercase tracking-wider">{log.minutes_late} min late</span>
+                          ) : (
+                            <span className="bg-green-100 text-green-800 px-1.5 py-0.5 rounded text-[9px] uppercase tracking-wider">On Time</span>
+                          )}
                         </span>
                       ))}
                     </div>
@@ -1287,6 +1305,10 @@ export default function EmployerDashboardView({ onNavigate, gigs, onAddGig, onLo
                     <div><label className="block text-xs font-bold mb-1">Duration</label><input type="text" required value={formData.duration} onChange={e => setFormData({...formData, duration: e.target.value})} className="w-full px-3.5 py-2 rounded-xl border focus:outline-primary text-sm" /></div>
                   </div>
                   <div><label className="block text-xs font-bold mb-1">Category</label><select value={formData.category} onChange={e => setFormData({...formData, category: e.target.value as any})} className="w-full px-3.5 py-2 rounded-xl border focus:outline-primary text-sm"><option value="F&B">F&B</option><option value="Event">Event</option><option value="Logistics">Logistics</option><option value="Cleaning">Cleaning</option></select></div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div><label className="block text-xs font-bold mb-1">Start Date</label><input type="date" required value={formData.start_date} onChange={e => setFormData({...formData, start_date: e.target.value})} className="w-full px-3.5 py-2 rounded-xl border focus:outline-primary text-sm" /></div>
+                    <div><label className="block text-xs font-bold mb-1">Start Time</label><input type="time" required value={formData.start_time} onChange={e => setFormData({...formData, start_time: e.target.value})} className="w-full px-3.5 py-2 rounded-xl border focus:outline-primary text-sm" /></div>
+                  </div>
                   <div><label className="block text-xs font-bold mb-1">Location</label><input type="text" required value={formData.location} onChange={e => setFormData({...formData, location: e.target.value})} className="w-full px-3.5 py-2 rounded-xl border focus:outline-primary text-sm" /></div>
                   <div><label className="block text-xs font-bold mb-1">Description</label><textarea rows={3} required value={formData.description} onChange={e => setFormData({...formData, description: e.target.value})} className="w-full px-3.5 py-2 rounded-xl border focus:outline-primary text-sm" /></div>
                   <div><label className="block text-xs font-bold mb-1">Tags</label><input type="text" value={formData.tags} onChange={e => setFormData({...formData, tags: e.target.value})} className="w-full px-3.5 py-2 rounded-xl border focus:outline-primary text-sm" placeholder="comma, separated" /></div>

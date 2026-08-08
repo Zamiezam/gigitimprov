@@ -307,13 +307,21 @@ export default function WorkerBrowseView({
       const rateNum = gig.rate ? parseInt(gig.rate.replace(/[^0-9]/g, '')) || 12 : 12;
       const totalAmount = rateNum * durationHours;
 
+      if (!gig.employer_id) {
+        toast('⚠️ This gig has no employer assigned. Cannot apply.');
+        return;
+      }
+
       // 1. Create applicant record
       const applicantPayload: any = {
         gig_id: id,
         worker_id: user.id,
-        employer_id: gig.employer_id || 'employer-placeholder',
+        employer_id: gig.employer_id,
         cover_letter: profile?.bio || 'Student helper interested in this role.',
         status: isInstant ? 'Hired' : 'Pending',
+        name: profile?.full_name || 'Gig Worker',
+        avatar: profile?.avatar_url || null,
+        rating: 4.0,
         created_at: new Date().toISOString(),
       };
 
@@ -341,7 +349,7 @@ export default function WorkerBrowseView({
           worker_id: user.id,
           worker_name: profile?.full_name || user.email?.split('@')[0] || 'Student Worker',
           worker_avatar: profile?.avatar_url || 'https://randomuser.me/api/portraits/men/32.jpg',
-          employer_id: gig.employer_id || 'employer-placeholder',
+          employer_id: gig.employer_id,
           employer_name: gig.employer || 'KK Business',
           gig_title: gig.title,
           gig_id: gig.id,
@@ -746,8 +754,20 @@ export default function WorkerBrowseView({
                             <div className="grid grid-cols-1 md:grid-cols-12 h-full">
                               <div className="md:col-span-5 h-48 md:h-full relative overflow-hidden bg-surface">
                                 <img className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" src={g.imageUrl} alt={g.title} />
-                                <div className="absolute top-3.5 left-3.5 bg-tertiary-container/90 text-white text-[9px] font-bold px-3 py-1 rounded-full flex items-center gap-1 backdrop-blur-xs">
-                                  <Zap size={10} fill="currentColor" /><span>INSTANT BOOKING</span>
+                                <div className="absolute top-3.5 left-3.5 flex flex-col gap-1">
+                                  {g.status === 'upcoming' && (
+                                    <div className="bg-blue-600/90 text-white text-[9px] font-bold px-3 py-1 rounded-full flex items-center gap-1 backdrop-blur-xs shadow-md">
+                                      <Clock size={10} fill="currentColor" /><span>UPCOMING GIG</span>
+                                    </div>
+                                  )}
+                                  {g.status === 'active' && (
+                                    <div className="bg-green-600/90 text-white text-[9px] font-bold px-3 py-1 rounded-full flex items-center gap-1 backdrop-blur-xs shadow-md">
+                                      <CheckCircle2 size={10} fill="currentColor" /><span>ACTIVE NOW</span>
+                                    </div>
+                                  )}
+                                  <div className="bg-tertiary-container/90 text-white text-[9px] font-bold px-3 py-1 rounded-full flex items-center gap-1 backdrop-blur-xs">
+                                    <Zap size={10} fill="currentColor" /><span>INSTANT BOOKING</span>
+                                  </div>
                                 </div>
                               </div>
 
@@ -829,12 +849,26 @@ export default function WorkerBrowseView({
 
                             <h3 className="font-semibold text-on-surface text-sm mt-4">{g.title}</h3>
                             <div className="flex justify-between items-center mt-1">
-                              <p className="text-[11px] font-medium text-on-surface-variant flex items-center gap-1.5">
+                              <p className="text-[11px] font-medium text-on-surface-variant flex items-center gap-1.5 mt-2">
                                 {g.employer}
                                 <span className="flex items-center gap-0.5 bg-blue-50 text-blue-700 px-1 py-0.5 rounded text-[7px] font-bold uppercase tracking-wider border border-blue-200">
                                   <Shield size={8} /> Verified
                                 </span>
                               </p>
+                              
+                              {g.status && (
+                                <div className="mt-2 flex items-center gap-1.5">
+                                  {g.status === 'upcoming' ? (
+                                    <span className="bg-blue-50 text-blue-700 px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider border border-blue-200 flex items-center gap-1">
+                                      <Clock size={10} /> Upcoming
+                                    </span>
+                                  ) : g.status === 'active' ? (
+                                    <span className="bg-green-50 text-green-700 px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider border border-green-200 flex items-center gap-1">
+                                      <CheckCircle2 size={10} /> Active Now
+                                    </span>
+                                  ) : null}
+                                </div>
+                              )}
                               <button 
                                 onClick={(e) => { e.stopPropagation(); setShowInsightsForEmployer(g.employer); }}
                                 className="text-[9px] bg-primary/10 text-primary font-bold px-1.5 py-0.5 rounded-full hover:bg-primary/20 transition-colors cursor-pointer flex items-center gap-0.5"

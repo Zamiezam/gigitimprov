@@ -424,7 +424,7 @@ export default function PublicProfileView({ workerId, attendanceMode = false, on
                     <div key={item.id} className="bg-white border border-outline-variant rounded-xl p-4 flex gap-4 items-start shadow-sm">
                       <div className="w-10 h-10 rounded-lg bg-surface-container flex items-center justify-center text-primary flex-shrink-0">
                         <span className="material-symbols-outlined text-[20px]">
-                          {item.gig_title.toLowerCase().includes('delivery') ? 'local_shipping' : 'storefront'}
+                          {(item.gig_title || '').toLowerCase().includes('delivery') ? 'local_shipping' : 'storefront'}
                         </span>
                       </div>
                       <div className="flex-1 min-w-0">

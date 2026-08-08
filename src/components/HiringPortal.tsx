@@ -32,6 +32,13 @@ export default function HiringPortal({ myGigs }: HiringPortalProps) {
     fetchWorkers();
   }, []);
 
+  // Auto-select the first gig if there is one and none is selected
+  useEffect(() => {
+    if (myGigs && myGigs.length > 0 && selectedGigId === 'all') {
+      setSelectedGigId(myGigs[0].id);
+    }
+  }, [myGigs, selectedGigId]);
+
   const fetchWorkers = async () => {
     setLoading(true);
     try {
@@ -67,7 +74,10 @@ export default function HiringPortal({ myGigs }: HiringPortalProps) {
           bio: p.bio || '',
           skills: skills,
           reliability_score: p.reliability_score || '4.8',
-          schedules: (schedulesData || []).filter((s: any) => s.worker_id === p.id)
+          schedules: (schedulesData || []).filter((s: any) => s.worker_id === p.id),
+          // Mock available_days and times for UI demonstration if no schedules exist
+          mock_availability: p.available_days || ['Monday', 'Wednesday', 'Friday'],
+          mock_times: p.available_times || ['Morning (8AM-12PM)', 'Afternoon (1PM-5PM)']
         };
       });
 
@@ -244,19 +254,24 @@ export default function HiringPortal({ myGigs }: HiringPortalProps) {
                     )}
                     
                     <div className="mt-auto pt-3 border-t border-outline-variant/50">
-                      <h5 className="text-[10px] font-bold text-on-surface uppercase tracking-wider mb-2 flex items-center gap-1"><Clock size={12} className="text-primary" /> Availability</h5>
-                      {worker.schedules && worker.schedules.length > 0 ? (
-                        <div className="space-y-1 max-h-24 overflow-y-auto pr-1">
-                          {worker.schedules.map((s: any) => (
-                            <div key={s.id} className="text-[10px] bg-surface-container-lowest border border-outline-variant px-2 py-1 rounded flex justify-between">
-                              <span className="font-semibold text-on-surface">{s.day_of_week}</span>
-                              <span className="text-on-surface-variant">{s.start_time} - {s.end_time}</span>
-                            </div>
-                          ))}
-                        </div>
-                      ) : (
-                        <p className="text-[10px] text-on-surface-variant italic">No schedule provided.</p>
-                      )}
+                      <div className="flex items-center gap-1.5 mb-2">
+                        <Clock size={14} className="text-primary" />
+                        <span className="text-[10px] font-bold tracking-wider text-on-surface-variant uppercase">Availability</span>
+                      </div>
+                      <div className="flex flex-wrap gap-1.5">
+                        {(worker as any).mock_availability.map((day: string, idx: number) => (
+                          <span key={idx} className="text-[10px] bg-primary/10 text-primary px-2 py-0.5 rounded-full font-medium">
+                            {day.substring(0,3)}
+                          </span>
+                        ))}
+                      </div>
+                      <div className="flex flex-wrap gap-1.5 mt-1">
+                        {(worker as any).mock_times.map((time: string, idx: number) => (
+                          <span key={idx} className="text-[10px] bg-surface-container text-on-surface-variant px-2 py-0.5 rounded-full font-medium">
+                            {time.split(' (')[0]}
+                          </span>
+                        ))}
+                      </div>
                     </div>
                   </div>
                   

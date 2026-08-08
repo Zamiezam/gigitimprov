@@ -23,6 +23,10 @@ export interface Gig {
   // FIX: coords now carries both visual map offsets (x/y %) AND real GPS coords (lat/lng)
   // lat/lng are required for Leaflet; x/y are kept for any legacy visual map pins
   coords: { x: number; y: number; lat: number; lng: number };
+  start_time?: string;
+  start_date?: string; // Optional if we keep it separate, but start_time can represent both
+  status?: 'active' | 'upcoming' | 'completed';
+  employer_id?: string;
 }
 
 export interface Applicant {
@@ -37,6 +41,19 @@ export interface Applicant {
   status: 'Pending' | 'Hired' | 'Messaged';
   worker_id?: string;
   gig_id?: string;
+}
+
+export interface AttendanceRecord {
+  id: string;
+  gig_id: string;
+  worker_id: string;
+  scanned_at: string;
+  status: 'on_time' | 'late';
+  minutes_late: number;
+  profiles?: {
+    full_name: string;
+    avatar_url: string;
+  };
 }
 
 export interface BackupWorker {

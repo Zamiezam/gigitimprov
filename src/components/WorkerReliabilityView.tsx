@@ -346,7 +346,7 @@ export default function WorkerReliabilityView({ onNavigate, isEmbedded = false, 
                         <div className="flex gap-3 items-start">
                           <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary flex-shrink-0">
                             <span className="material-symbols-outlined text-[20px]">
-                              {item.gig_title.toLowerCase().includes('delivery') ? 'local_shipping' : 'storefront'}
+                              {(item.gig_title || '').toLowerCase().includes('delivery') ? 'local_shipping' : 'storefront'}
                             </span>
                           </div>
                           <div className="flex-1 min-w-0">
